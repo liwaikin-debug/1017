@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>輝英VR 睇樓網 - 專屬感恩版</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
@@ -12,136 +12,189 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
-    body { background-color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; touch-action: none; overflow: hidden; margin: 0; padding: 0; }
-    #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
-    
-    /* 玻璃擬態 */
-    .glass-panel { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.1); }
-    .glass-btn { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); }
-    
-    /* 自訂 Polycam 風格導覽滑桿 */
-    input[type=range].poly-slider { -webkit-appearance: none; width: 100%; background: transparent; }
-    input[type=range].poly-slider::-webkit-slider-thumb { -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%; background: #ffffff; cursor: pointer; margin-top: -6px; }
-    input[type=range].poly-slider::-webkit-slider-runnable-track { width: 100%; height: 2px; cursor: pointer; background: rgba(255,255,255,0.4); }
+    body { background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", sans-serif; touch-action: none; overflow: hidden; }
+    .glass-btn { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1); }
+    /* 自訂導覽滑桿樣式 */
+    input[type=range].tour-slider {
+      -webkit-appearance: none; width: 100%; background: transparent;
+    }
+    input[type=range].tour-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: #ffffff; cursor: pointer; margin-top: -8px; box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+    input[type=range].tour-slider::-webkit-slider-runnable-track {
+      width: 100%; height: 4px; cursor: pointer; background: rgba(255,255,255,0.3); border-radius: 2px;
+    }
   </style>
 </head>
-<body class="text-slate-100 select-none">
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
 
-  <!-- 3D 渲染區域 -->
-  <div id="canvas-container"></div>
+  <!-- 頂部 Navigation Bar -->
+  <nav class="bg-white border-b border-slate-200 sticky top-0 z-30 px-4 py-3 shadow-sm shrink-0">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-blue-600 text-white font-black flex items-center justify-center text-lg">家</div>
+        <span class="font-bold text-lg text-slate-900 tracking-tight">輝英VR 睇樓網</span>
+      </div>
+      <div class="text-xs text-slate-500 hidden sm:block">廣告日期：今日 • 樓盤編號：#LOVE2026</div>
+    </div>
+  </nav>
 
-  <!-- 頂部：標題與感恩資訊 (可收合) -->
-  <header id="info-panel" class="absolute top-0 left-0 w-full z-20 transition-transform duration-300 transform translate-y-0">
-    <div class="glass-panel m-2 sm:m-4 p-4 rounded-2xl shadow-2xl flex flex-col gap-3">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white">家</div>
-          <div>
-            <h1 class="text-base font-bold text-white">輝英VR 睇樓網</h1>
-            <p class="text-[10px] text-slate-400">友愛邨 愛智樓 • 35.12 m² / 378 呎</p>
+  <!-- 主內容區域 -->
+  <main class="max-w-7xl mx-auto w-full flex-grow p-2 sm:p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 h-[calc(100vh-60px)]">
+
+    <!-- ==================== 左側：3D 視窗 ==================== -->
+    <section class="lg:col-span-8 flex flex-col gap-2 relative h-full min-h-[50vh]">
+      
+      <!-- 3D 展示主大框 -->
+      <div class="relative w-full h-full bg-slate-900 rounded-2xl overflow-hidden shadow-lg border border-slate-200">
+        
+        <div id="canvas-container" class="w-full h-full"></div>
+
+        <div id="loading-overlay" class="absolute inset-0 bg-slate-900/90 backdrop-blur-sm flex flex-col items-center justify-center text-white z-20">
+          <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p id="loading-text" class="text-sm font-medium text-slate-200">正在準備驚喜，請稍候...</p>
+        </div>
+
+        <div class="absolute top-4 left-4 z-10 bg-slate-900/70 backdrop-blur text-white text-xs px-3 py-1.5 rounded-full border border-white/20 flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="status-badge">VR 360° 互動漫遊中</span>
+        </div>
+
+        <!-- ================= 右下角常規控制 (導覽時隱藏) ================= -->
+        <div id="normal-controls" class="absolute bottom-4 right-4 z-10 flex flex-col items-end gap-2">
+          
+          <!-- D-Pad 十字鍵 (漫遊模式才顯示) -->
+          <div id="d-pad" class="hidden grid grid-cols-3 gap-1.5 p-2 glass-btn rounded-2xl mb-1 shadow-2xl">
+            <div class="col-start-2">
+              <button onpointerdown="startPan(0, 0.01)" onpointerup="stopPan()" onpointerleave="stopPan()" class="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center text-white active:bg-blue-500 transition"><i data-lucide="chevron-up"></i></button>
+            </div>
+            <div class="col-start-1 row-start-2">
+              <button onpointerdown="startPan(0.01, 0)" onpointerup="stopPan()" onpointerleave="stopPan()" class="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center text-white active:bg-blue-500 transition"><i data-lucide="chevron-left"></i></button>
+            </div>
+            <div class="col-start-2 row-start-2 flex items-center justify-center">
+              <button onclick="resetPan()" class="w-12 h-12 bg-blue-600/80 rounded-xl text-[11px] font-bold text-white shadow-inner active:scale-90 transition">平視</button>
+            </div>
+            <div class="col-start-3 row-start-2">
+              <button onpointerdown="startPan(-0.01, 0)" onpointerup="stopPan()" onpointerleave="stopPan()" class="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center text-white active:bg-blue-500 transition"><i data-lucide="chevron-right"></i></button>
+            </div>
+            <div class="col-start-2 row-start-3">
+              <button onpointerdown="startPan(0, -0.01)" onpointerup="stopPan()" onpointerleave="stopPan()" class="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center text-white active:bg-blue-500 transition"><i data-lucide="chevron-down"></i></button>
+            </div>
+          </div>
+
+          <!-- 功能列 -->
+          <div class="flex items-center gap-2">
+            <button onclick="startTourMode()" class="glass-btn text-white text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-1.5 hover:bg-slate-800 transition">
+              <i data-lucide="play-circle" class="w-4 h-4 text-amber-400"></i>
+              <span>🎬 虛擬導覽</span>
+            </button>
+            <button onclick="toggleWalkMode()" id="btn-mode" class="glass-btn text-white text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-1.5 hover:bg-slate-800 transition">
+              <i data-lucide="footprints" class="w-4 h-4 text-emerald-400"></i>
+              <span>自由漫遊</span>
+            </button>
+            <button onclick="adjustLight()" class="glass-btn text-amber-300 p-2.5 rounded-xl hover:bg-slate-800 transition shadow-lg">
+              <i data-lucide="sun" class="w-5 h-5"></i>
+            </button>
           </div>
         </div>
-        <button onclick="toggleInfo()" class="p-2 rounded-full hover:bg-white/10 transition"><i data-lucide="chevron-up" class="w-5 h-5 text-slate-300"></i></button>
+
+        <!-- ================= 底部中央：虛擬導覽時間軸 ================= -->
+        <div id="tour-controls" class="hidden absolute bottom-6 left-1/2 -translate-x-1/2 z-20 w-[95%] sm:w-[80%] max-w-[500px]">
+          <!-- 頂部進度膠囊 -->
+          <div class="flex justify-center mb-3">
+            <div class="bg-black/80 backdrop-blur-md text-white text-xs font-mono tracking-widest px-5 py-2 rounded-full border border-white/20 shadow-lg">
+              Frame <span id="tour-frame-text">1</span> of 800
+            </div>
+          </div>
+          <!-- 底部控制條 -->
+          <div class="bg-black/90 backdrop-blur-xl px-5 py-4 rounded-3xl border border-white/20 shadow-2xl flex items-center gap-4">
+            <button onclick="exitTourMode()" class="text-white text-sm font-bold whitespace-nowrap flex items-center gap-1 hover:text-slate-300 pr-3 border-r border-white/30">
+              <i data-lucide="arrow-left" class="w-5 h-5"></i> 返回
+            </button>
+            
+            <input type="range" id="tour-slider" min="0" max="800" value="0" class="tour-slider flex-grow" oninput="scrubTour(this.value)">
+            
+            <div class="flex items-center gap-2 pl-2">
+              <button onclick="stepTour(-10)" class="text-white p-2 rounded-full hover:bg-white/20 active:scale-90 bg-white/10"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
+              <button onclick="stepTour(10)" class="text-white p-2 rounded-full hover:bg-white/20 active:scale-90 bg-white/10"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
+            </div>
+          </div>
+        </div>
+
       </div>
+    </section>
 
-      <div class="bg-amber-900/40 border border-amber-500/30 p-3 rounded-xl">
-        <h3 class="text-amber-400 font-bold text-sm mb-1 flex items-center gap-1"><i data-lucide="heart" class="w-4 h-4 fill-amber-400"></i> 給爸媽的說話</h3>
-        <p class="text-xs text-amber-100/90 leading-relaxed text-justify">
-          免責聲明：回望呢3X年，為咗建立我哋呢個家，你哋真係捱咗好多苦。每一磚每一瓦，都係用汗水同心血換返嚟嘅。多謝你哋咁多年嚟為呢個家遮風擋雨。<br>
-          <span class="font-bold text-amber-300">爸媽，我愛你哋 I LOVE YOU ❤️</span>
-        </p>
+    <!-- ==================== 右側：專屬感恩資訊 ==================== -->
+    <section class="lg:col-span-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col h-full overflow-y-auto">
+      <div class="space-y-4 flex flex-col h-full">
+        <div class="border-b border-slate-100 pb-4">
+          <div class="flex items-baseline justify-between">
+            <span class="text-xs font-semibold uppercase text-rose-600 bg-rose-50 px-2 py-0.5 rounded">無價之寶</span>
+            <span class="text-2xl font-extrabold text-rose-600">售$ 1212萬億</span>
+          </div>
+          <div class="mt-2 bg-rose-50 text-rose-700 text-xs px-3 py-2.5 rounded-xl flex items-center justify-between border border-rose-100 font-medium">
+            <span>月供：阿爸一人 | 首期：2舊叉燒</span>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-baseline gap-2 mb-3">
+            <span class="text-sm text-slate-500">實用面積</span>
+            <span class="text-xl font-bold text-slate-900">35.12 m² / 378 呎</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-center py-3 bg-slate-50 rounded-xl border border-slate-100">
+            <div>
+              <p class="text-[11px] text-slate-400">屋苑名稱</p>
+              <p class="text-sm font-bold text-slate-800">友愛邨 愛智樓</p>
+            </div>
+            <div>
+              <p class="text-[11px] text-slate-400">樓齡</p>
+              <p class="text-sm font-bold text-slate-800">34年左右</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-amber-50 p-4 rounded-xl border border-amber-100 mt-2 flex-grow flex flex-col justify-center">
+          <h3 class="text-amber-800 font-bold mb-3 flex items-center gap-1.5 text-base">
+            <i data-lucide="heart" class="w-5 h-5 fill-amber-600 text-amber-600"></i>
+            給爸媽的說話
+          </h3>
+          <div class="text-sm text-amber-900/80 leading-relaxed space-y-3 text-justify">
+            <p>免責聲明：回望呢3X年，為咗建立我哋呢個家，你哋真係捱咗好多苦。由後生捱到依家，每一磚每一瓦，都係你哋用汗水同心血換返嚟嘅。</p>
+            <p>我好明白呢一切辛苦得嚟，絕對得來不易。</p>
+            <p>多謝你哋咁多年嚟為呢個家遮風擋雨，將最好嘅都留畀我哋。依家個家已經安穩落嚟，你哋嘅重擔係時候放低少少。辛苦晒你哋，</p>
+            <p class="font-bold text-rose-600 text-base">多謝！多謝！多謝！多謝你哋將最好嘅都留畀我。</p>
+            <p class="font-bold text-xl text-rose-600 pt-2 text-center">爸媽，我愛你哋 I LOVE YOU ❤️</p>
+          </div>
+        </div>
       </div>
-    </div>
-  </header>
-
-  <!-- 右上角：展開資訊按鈕 (資訊收合時顯示) -->
-  <button id="btn-show-info" onclick="toggleInfo()" class="hidden absolute top-4 right-4 z-20 glass-btn p-3 rounded-full text-white shadow-lg"><i data-lucide="info" class="w-5 h-5"></i></button>
-
-  <!-- 載入動畫 -->
-  <div id="loading-overlay" class="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-900">
-    <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-    <p class="text-sm font-medium text-slate-300">載入家中回憶...</p>
-  </div>
-
-  <!-- ==================== Polycam 風格：時間軸虛擬導覽 (預設隱藏) ==================== -->
-  <div id="tour-ui" class="hidden absolute bottom-20 left-1/2 -translate-x-1/2 z-40 w-[95%] max-w-[500px] flex flex-col items-center gap-3">
-    <!-- 頂部膠囊：Frame -->
-    <div class="glass-btn px-6 py-2 rounded-full text-white text-xs font-mono tracking-widest flex items-center gap-2">
-      <i data-lucide="activity" class="w-3.5 h-3.5 opacity-50"></i>
-      Frame <span id="tour-frame">1</span> of 1000
-    </div>
-    <!-- 底部膠囊：滑桿控制器 -->
-    <div class="w-full glass-btn px-4 py-3 rounded-[30px] flex items-center gap-4 shadow-2xl">
-      <button onclick="exitTour()" class="text-white text-xs whitespace-nowrap flex items-center gap-1 hover:text-slate-300 opacity-80 pl-1 pr-2 border-r border-white/20">
-        <i data-lucide="arrow-left" class="w-4 h-4"></i> 返回
-      </button>
-      
-      <input type="range" id="tour-slider" min="0" max="1000" value="0" class="poly-slider flex-grow" oninput="scrubTour(this.value)">
-      
-      <div class="flex items-center gap-1 opacity-80">
-        <button onclick="stepTour(-10)" class="p-1.5 active:scale-75 transition"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
-        <button onclick="stepTour(10)" class="p-1.5 active:scale-75 transition"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==================== 底部功能列 (常規模式) ==================== -->
-  <div id="bottom-bar" class="absolute bottom-0 left-0 w-full z-20 bg-[#1c1c1e] pb-6 pt-3 px-2 flex justify-around items-center border-t border-white/10">
-    <button onclick="resetCamera()" class="flex flex-col items-center gap-1 text-slate-400 hover:text-white transition w-16">
-      <i data-lucide="rotate-ccw" class="w-5 h-5"></i><span class="text-[10px]">重置視角</span>
-    </button>
-    <button onclick="toggleWalkMode()" id="btn-walk" class="flex flex-col items-center gap-1 text-emerald-400 hover:text-emerald-300 transition w-16">
-      <i data-lucide="footprints" class="w-5 h-5"></i><span class="text-[10px]">自由漫遊</span>
-    </button>
-    <!-- 啟動虛擬導覽 -->
-    <button onclick="startTour()" class="flex flex-col items-center gap-1 text-amber-400 hover:text-amber-300 transition w-16">
-      <i data-lucide="clapperboard" class="w-5 h-5"></i><span class="text-[10px]">虛擬導覽</span>
-    </button>
-    <button onclick="adjustLight()" class="flex flex-col items-center gap-1 text-slate-400 hover:text-white transition w-16">
-      <i data-lucide="sun" class="w-5 h-5"></i><span class="text-[10px]">調整亮度</span>
-    </button>
-  </div>
-
-  <!-- ==================== 右側 D-Pad (漫遊模式才顯示) ==================== -->
-  <div id="d-pad" class="hidden absolute bottom-24 right-4 z-20 grid grid-cols-3 gap-1 p-2 glass-btn rounded-2xl shadow-xl">
-    <div class="col-start-2">
-      <button onpointerdown="startPan(0, 0.02)" onpointerup="stopPan()" onpointerleave="stopPan()" class="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center text-white active:bg-blue-500/50"><i data-lucide="chevron-up"></i></button>
-    </div>
-    <div class="col-start-1 row-start-2">
-      <button onpointerdown="startPan(0.02, 0)" onpointerup="stopPan()" onpointerleave="stopPan()" class="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center text-white active:bg-blue-500/50"><i data-lucide="chevron-left"></i></button>
-    </div>
-    <div class="col-start-2 row-start-2 flex items-center justify-center">
-      <button onclick="resetPan()" class="w-10 h-10 bg-blue-600/50 rounded-lg text-[10px] font-bold text-white shadow-inner active:scale-90">平視</button>
-    </div>
-    <div class="col-start-3 row-start-2">
-      <button onpointerdown="startPan(-0.02, 0)" onpointerup="stopPan()" onpointerleave="stopPan()" class="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center text-white active:bg-blue-500/50"><i data-lucide="chevron-right"></i></button>
-    </div>
-    <div class="col-start-2 row-start-3">
-      <button onpointerdown="startPan(0, -0.02)" onpointerup="stopPan()" onpointerleave="stopPan()" class="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center text-white active:bg-blue-500/50"><i data-lucide="chevron-down"></i></button>
-    </div>
-  </div>
+    </section>
+  </main>
 
   <script>
     let scene, camera, renderer, controls, currentModel;
-    let ambientLight, dirLight;
-    let isWalk = false, isTour = false;
+    let ambientLight;
+    let isWalk = false;
+    let isTourMode = false;
     let currentExposure = 1.0;
     
-    // 平視變數
-    let cameraPitch = 0, cameraYaw = 0, panInterval;
+    // 長輩友善版：限制頭部轉動範圍 (45度)
+    let cameraPitch = 0, cameraYaw = 0;
+    const MAX_ANGLE = Math.PI / 4; // 45度
+    let panInterval;
 
-    // 導覽軌跡
     let tourCurve, targetCurve;
 
     function init3D() {
       const container = document.getElementById('canvas-container');
       scene = new THREE.Scene();
-      
-      camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+      scene.background = new THREE.Color(0xf8fafc); 
+
+      camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
       
       renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setSize(container.clientWidth, container.clientHeight);
       renderer.outputEncoding = THREE.sRGBEncoding;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = currentExposure;
@@ -149,27 +202,32 @@
 
       controls = new THREE.OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
-      controls.dampingFactor = 0.04;
-      controls.rotateSpeed = 0.5;
+      controls.dampingFactor = 0.03; 
+      controls.rotateSpeed = 0.3; 
 
       ambientLight = new THREE.AmbientLight(0xffffff, 2.0);
       scene.add(ambientLight);
-      dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
-      dirLight.position.set(5, 10, 7);
-      scene.add(dirLight);
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.2));
 
-      // 設定虛擬導覽的路線 (可微調座標)
+      // ====== 虛擬導覽：純水平行路軌跡 ======
+      // Y軸固定為 1.3 (平視高度)，模擬行路
       tourCurve = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(0, 1.5, 3),    // 起點
-        new THREE.Vector3(2, 1.5, 0),    // 中間
-        new THREE.Vector3(1, 1.5, -3),   // 轉角
-        new THREE.Vector3(-2, 1.5, -2)   // 終點
+        new THREE.Vector3(0, 1.3, 4),    
+        new THREE.Vector3(2, 1.3, 2),    
+        new THREE.Vector3(2, 1.3, -2),   
+        new THREE.Vector3(-2, 1.3, -2),  
+        new THREE.Vector3(-2, 1.3, 2),   
+        new THREE.Vector3(0, 1.3, 4)     
       ]);
+      
+      // 目標點：永遠看向同一個遠方目標 (例如電視方向，假設在 Z = -10 的位置)
       targetCurve = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(0, 1.5, 0),    // 看正前
-        new THREE.Vector3(0, 1.5, -2),   // 看深處
-        new THREE.Vector3(-2, 1.5, -1),  // 轉彎看
-        new THREE.Vector3(0, 1.5, 0)     // 回看大廳
+        new THREE.Vector3(0, 1.3, -10),
+        new THREE.Vector3(0, 1.3, -10),
+        new THREE.Vector3(0, 1.3, -10),
+        new THREE.Vector3(0, 1.3, -10),
+        new THREE.Vector3(0, 1.3, -10),
+        new THREE.Vector3(0, 1.3, -10)
       ]);
 
       window.addEventListener('resize', onResize);
@@ -177,6 +235,8 @@
 
       if (window.location.protocol === 'blob:' || window.location.protocol === 'file:') {
         createDemoRoom();
+        document.getElementById('loading-overlay').classList.add('hidden');
+        resetCamera();
       } else {
         loadGLTF('24_7_2026.glb');
       }
@@ -184,13 +244,11 @@
 
     function createDemoRoom() {
       const geo = new THREE.BoxGeometry(8, 3, 10);
-      const mat = new THREE.MeshStandardMaterial({ color: 0xcccccc, side: THREE.DoubleSide });
+      const mat = new THREE.MeshStandardMaterial({ color: 0xeeeeee, side: THREE.BackSide, roughness: 0.8 });
       const room = new THREE.Mesh(geo, mat);
       room.position.y = 1.5;
       scene.add(room);
       currentModel = room;
-      document.getElementById('loading-overlay').classList.add('hidden');
-      resetCamera();
     }
 
     function loadGLTF(url) {
@@ -198,7 +256,6 @@
       loader.load(url, function (gltf) {
         if (currentModel) scene.remove(currentModel);
         currentModel = gltf.scene;
-
         currentModel.traverse((child) => {
           if (child.isMesh && child.material) {
             child.material.side = THREE.DoubleSide; 
@@ -206,78 +263,79 @@
             child.material.depthWrite = true;
           }
         });
-
         const box = new THREE.Box3().setFromObject(currentModel);
         const center = box.getCenter(new THREE.Vector3());
         currentModel.position.sub(center);
         scene.add(currentModel);
-
         resetCamera();
         document.getElementById('loading-overlay').classList.add('hidden');
       }, undefined, function (error) {
         createDemoRoom();
+        document.getElementById('loading-overlay').classList.add('hidden');
+        resetCamera();
       });
     }
 
     function onResize() {
-      camera.aspect = window.innerWidth / window.innerHeight;
+      const container = document.getElementById('canvas-container');
+      if(!container) return;
+      camera.aspect = container.clientWidth / container.clientHeight;
       camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setSize(container.clientWidth, container.clientHeight);
     }
 
-    // ================= 🎬 虛擬導覽滑桿邏輯 =================
-    function startTour() {
-      isTour = true;
-      document.getElementById('bottom-bar').classList.add('hidden');
-      document.getElementById('tour-ui').classList.remove('hidden');
-      document.getElementById('d-pad').classList.add('hidden');
+    // ====== 🎬 虛擬導覽邏輯 ======
+    function startTourMode() {
+      isTourMode = true;
+      document.getElementById('normal-controls').classList.add('hidden');
+      document.getElementById('tour-controls').classList.remove('hidden');
+      document.getElementById('status-badge').innerText = "虛擬導覽播放中";
       controls.enabled = false; 
       scrubTour(0);
       document.getElementById('tour-slider').value = 0;
-      
-      // 自動收合資訊板
-      document.getElementById('info-panel').classList.add('-translate-y-full');
-      document.getElementById('btn-show-info').classList.remove('hidden');
     }
 
-    function exitTour() {
-      isTour = false;
-      document.getElementById('bottom-bar').classList.remove('hidden');
-      document.getElementById('tour-ui').classList.add('hidden');
+    function exitTourMode() {
+      isTourMode = false;
+      document.getElementById('normal-controls').classList.remove('hidden');
+      document.getElementById('tour-controls').classList.add('hidden');
+      document.getElementById('status-badge').innerText = isWalk ? "第一人稱漫遊 (WASD)" : "VR 360° 互動漫遊中";
       controls.enabled = true;
-      if (isWalk) document.getElementById('d-pad').classList.remove('hidden');
-      resetCamera();
+      if (!isWalk) resetCamera();
     }
 
     function scrubTour(value) {
-      document.getElementById('tour-frame').innerText = value;
-      const t = value / 1000; 
-      camera.position.copy(tourCurve.getPointAt(t));
-      controls.target.copy(targetCurve.getPointAt(t));
+      document.getElementById('tour-frame-text').innerText = value;
+      const t = value / 800; // 0.0 到 1.0
+      const pos = tourCurve.getPointAt(t);
+      const tar = targetCurve.getPointAt(t);
+      camera.position.copy(pos);
+      controls.target.copy(tar);
       controls.update();
     }
 
     function stepTour(amount) {
       const slider = document.getElementById('tour-slider');
       let val = parseInt(slider.value) + amount;
-      val = Math.max(0, Math.min(1000, val));
+      if(val < 0) val = 0;
+      if(val > 800) val = 800;
       slider.value = val;
       scrubTour(val);
     }
+    // =============================
 
-    // ================= D-Pad 與 WASD 邏輯 =================
     const keys = { w:false, a:false, s:false, d:false };
-    window.addEventListener('keydown', e => { if(isWalk && !isTour) keys[e.key.toLowerCase()] = true; });
-    window.addEventListener('keyup', e => { if(isWalk && !isTour) keys[e.key.toLowerCase()] = false; });
+    window.addEventListener('keydown', e => { if(isWalk && !isTourMode) keys[e.key.toLowerCase()] = true; });
+    window.addEventListener('keyup', e => { if(isWalk && !isTourMode) keys[e.key.toLowerCase()] = false; });
 
     function animate() {
       requestAnimationFrame(animate);
-      
-      if (isWalk && !isTour) {
-        const speed = 0.04;
+      if (isWalk && !isTourMode) {
+        const speed = 0.02; // 極慢走路速度
         const dir = new THREE.Vector3();
         camera.getWorldDirection(dir);
-        dir.y = 0; dir.normalize();
+        dir.y = 0; dir.normalize(); // 鎖死 Y 軸，純水平移動
+        
         const right = new THREE.Vector3();
         right.crossVectors(camera.up, dir).normalize();
 
@@ -286,25 +344,34 @@
         if (keys.a) { camera.position.addScaledVector(right, speed); controls.target.addScaledVector(right, speed); }
         if (keys.d) { camera.position.addScaledVector(right, -speed); controls.target.addScaledVector(right, -speed); }
       }
-
-      if (controls && !isTour) controls.update();
+      if (controls && !isTourMode) controls.update();
       renderer.render(scene, camera);
     }
 
+    // ====== 十字鍵：45度慢轉安全限制 ======
     function startPan(dx, dy) {
       if (panInterval) clearInterval(panInterval);
       panInterval = setInterval(() => {
         cameraYaw += dx;
         cameraPitch += dy;
-        cameraPitch = Math.max(-Math.PI/2.5, Math.min(Math.PI/2.5, cameraPitch));
-        updateTarget();
+        // 限制最多只能轉 45度 (Math.PI / 4)
+        cameraYaw = Math.max(-MAX_ANGLE, Math.min(MAX_ANGLE, cameraYaw));
+        cameraPitch = Math.max(-MAX_ANGLE, Math.min(MAX_ANGLE, cameraPitch));
+        updateCameraTarget();
       }, 16);
     }
 
-    function stopPan() { if (panInterval) clearInterval(panInterval); }
-    function resetPan() { cameraPitch = 0; updateTarget(); }
+    function stopPan() {
+      if (panInterval) clearInterval(panInterval);
+    }
 
-    function updateTarget() {
+    function resetPan() {
+      cameraYaw = 0;
+      cameraPitch = 0;
+      updateCameraTarget();
+    }
+
+    function updateCameraTarget() {
       const dist = camera.position.distanceTo(controls.target);
       const dir = new THREE.Vector3(
         -Math.sin(cameraYaw) * Math.cos(cameraPitch),
@@ -317,33 +384,22 @@
 
     function toggleWalkMode() {
       isWalk = !isWalk;
-      const btn = document.getElementById('btn-walk');
+      const btn = document.getElementById('btn-mode');
       const dpad = document.getElementById('d-pad');
       if (isWalk) {
-        camera.position.set(0, 1.5, 2);
+        camera.position.set(0, 1.3, 2);
         cameraYaw = 0; cameraPitch = 0;
-        updateTarget();
-        btn.classList.add('text-emerald-400');
-        btn.classList.remove('text-slate-400');
+        updateCameraTarget();
+        btn.innerHTML = `<i data-lucide="orbit" class="w-4 h-4 text-blue-400"></i><span>360° 模式</span>`;
+        document.getElementById('status-badge').innerText = "第一人稱漫遊 (WASD)";
         dpad.classList.remove('hidden');
       } else {
         resetCamera();
-        btn.classList.add('text-slate-400');
-        btn.classList.remove('text-emerald-400');
+        btn.innerHTML = `<i data-lucide="footprints" class="w-4 h-4 text-emerald-400"></i><span>自由漫遊</span>`;
+        document.getElementById('status-badge').innerText = "VR 360° 互動漫遊中";
         dpad.classList.add('hidden');
       }
-    }
-
-    function toggleInfo() {
-      const panel = document.getElementById('info-panel');
-      const btn = document.getElementById('btn-show-info');
-      if (panel.classList.contains('-translate-y-full')) {
-        panel.classList.remove('-translate-y-full');
-        btn.classList.add('hidden');
-      } else {
-        panel.classList.add('-translate-y-full');
-        btn.classList.remove('hidden');
-      }
+      lucide.createIcons();
     }
 
     function adjustLight() {
@@ -353,12 +409,15 @@
 
     function resetCamera() {
       if (!currentModel) return;
-      camera.position.set(0, 1.5, 4);
-      controls.target.set(0, 1.5, 0);
+      camera.position.set(0, 1.3, 4);
+      controls.target.set(0, 1.3, 0); // 平視
       controls.update();
     }
 
-    window.onload = () => { init3D(); lucide.createIcons(); };
+    window.onload = () => {
+      init3D();
+      lucide.createIcons();
+    };
   </script>
 </body>
 </html>
