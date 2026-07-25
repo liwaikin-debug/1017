@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>3D 模型 360度互動觀看器</title>
+  
+  <!-- Tailwind CSS (UI 樣式) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Three.js 3D 渲染引擎 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+  <!-- Google Model Viewer (支援 iPhone 原生 AR 實境投影) -->
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+
+  <!-- Lucide 圖示庫 -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    body, html {
+      touch-action: none;
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+      background-color: #0f172a;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    #canvas-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="text-slate-100 select-none">
+
+  <!-- 3D Canvas 容器 -->
+  <div id="canvas-container"></div>
+
+  <!-- 隱藏的 Google Model Viewer (專供 iPhone AR 實境喚醒) -->
+  <model-viewer id="mv-ar" style="display:none;" src="24_7_2026.glb" ar camera-controls touch-action="pan-y"></model-viewer>
+
+  <!-- 頂部列 -->
+  <header class="absolute top-0 left-0 right-0 z-20 p-4 flex items-center justify-between pointer-events-none">
+    <div class="glass-panel px-4 py-2.5 rounded-2xl flex items-center gap-3 pointer-events-auto shadow-xl">
+      <div class="w-8 h-8 rounded-xl bg-blue-600/30 text-blue-400 flex items-center justify-center font-bold">
+        <i data-lucide="box" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <h1 id="file-title" class="text-sm font-semibold text-white tracking-wide truncate max-w-[160px] sm:max-w-[260px]">
+          24_7_2026.glb
+        </h1>
+        <p id="file-subtext" class="text-[11px] text-slate-400">3D 模型網頁檢視器</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2 pointer-events-auto">
+      <!-- 換檔按鈕 -->
+      <label class="glass-panel hover:bg-slate-800/80 active:scale-95 transition text-xs font-medium px-3.5 py-2.5 rounded-xl cursor-pointer flex items-center gap-2 shadow-lg text-blue-400 border-blue-500/30">
+        <i data-lucide="folder-open" class="w-4 h-4"></i>
+        <span class="hidden sm:inline">開啟其他模型</span>
+        <input type="file" id="file-input" accept=".glb,.gltf" class="hidden">
+      </label>
+
+      <!-- iPhone AR 實境觀看按鈕 -->
+      <button id="btn-ar" onclick="launchAR()" class="glass-panel hover:bg-slate-800/80 active:scale-95 transition text-xs font-medium px-3.5 py-2.5 rounded-xl flex items-center gap-2 text-emerald-400 border-emerald-500/30 shadow-lg">
+        <i data-lucide="scan" class="w-4 h-4"></i>
+        <span class="hidden sm:inline">AR 實境</span>
+      </button>
+
+      <!-- 截圖按鈕 -->
+      <button onclick="takeScreenshot()" class="glass-panel hover:bg-slate-800/80 active:scale-95 transition p-2.5 rounded-xl text-slate-300 shadow-lg">
+        <i data-lucide="camera" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- 載入中指示條 -->
+  <div id="loading-bar-container" class="absolute top-20 left-1/2 -translate-x-1/2 z-20 glass-panel px-6 py-3 rounded-full flex items-center gap-3 shadow-xl">
+    <div class="w-4 h-4 rounded-full border-2 border-blue-400 border-t-transparent animate-spin"></div>
+    <span id="loading-text" class="text-xs font-medium text-slate-200">正在載入 24_7_2026.glb...</span>
+  </div>
+
+  <!-- 底部右側快選功能欄 -->
+  <div id="controls-panel" class="absolute bottom-6 right-4 z-20 flex flex-col gap-2">
+    <button onclick="resetCamera()" class="glass-panel p-3 rounded-2xl hover:bg-slate-800 text-slate-200 active:scale-90 transition shadow-lg" title="重置視角">
+      <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+    </button>
+    <button id="btn-auto-rotate" onclick="toggleAutoRotate()" class="glass-panel p-3 rounded-2xl hover:bg-slate-800 text-slate-300 active:scale-90 transition shadow-lg" title="自動旋轉">
+      <i data-lucide="orbit" class="w-5 h-5"></i>
+    </button>
+    <button id="btn-wireframe" onclick="toggleWireframe()" class="glass-panel p-3 rounded-2xl hover:bg-slate-800 text-slate-300 active:scale-90 transition shadow-lg" title="網格網線">
+      <i data-lucide="grid-3x3" class="w-5 h-5"></i>
+    </button>
+    <button onclick="togglePanel('settings-modal')" class="glass-panel p-3 rounded-2xl hover:bg-slate-800 text-blue-400 active:scale-90 transition shadow-lg" title="環境設定">
+      <i data-lucide="sliders" class="w-5 h-5"></i>
+    </button>
+  </div>
+
+  <!-- 底部左側：3D 面數頂點數據 -->
+  <div id="hud-info" class="absolute bottom-6 left-4 z-20 glass-panel px-4 py-2.5 rounded-2xl flex items-center gap-4 text-xs text-slate-300">
+    <div class="flex items-center gap-1.5">
+      <i data-lucide="triangle" class="w-3.5 h-3.5 text-blue-400"></i>
+      <span>面數: <strong id="info-faces" class="text-white">0</strong></span>
+    </div>
+    <div class="w-px h-3 bg-slate-700"></div>
+    <div class="flex items-center gap-1.5">
+      <i data-lucide="dot" class="w-3.5 h-3.5 text-emerald-400"></i>
+      <span>頂點: <strong id="info-vertices" class="text-white">0</strong></span>
+    </div>
+  </div>
+
+  <!-- 設定控制彈窗 -->
+  <div id="settings-modal" class="hidden absolute inset-0 z-40 bg-slate-950/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full sm:max-w-md glass-panel rounded-t-3xl sm:rounded-3xl p-6 border border-slate-700/60 shadow-2xl space-y-5">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <h3 class="font-bold text-slate-100 flex items-center gap-2">
+          <i data-lucide="settings" class="w-4 h-4 text-blue-400"></i>
+          視覺調整
+        </h3>
+        <button onclick="togglePanel('settings-modal')" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- 背景切換 -->
+      <div>
+        <label class="text-xs text-slate-400 font-medium mb-2 block">背景主題</label>
+        <div class="grid grid-cols-3 gap-2">
+          <button onclick="setBackground('dark')" class="py-2 text-xs rounded-xl bg-slate-900 text-slate-300 border border-slate-700">深色</button>
+          <button onclick="setBackground('light')" class="py-2 text-xs rounded-xl bg-slate-200 text-slate-900 border border-slate-300">純白</button>
+          <button onclick="setBackground('gradient')" class="py-2 text-xs rounded-xl bg-gradient-to-b from-slate-800 to-blue-950 text-slate-200 border border-slate-700">工作室</button>
+        </div>
+      </div>
+
+      <!-- 燈光亮度 -->
+      <div>
+        <div class="flex justify-between text-xs mb-1">
+          <span class="text-slate-400">燈光強度</span>
+          <span id="light-val" class="text-blue-400">1.2</span>
+        </div>
+        <input type="range" min="0.2" max="3" step="0.1" value="1.2" oninput="updateLightIntensity(this.value)" class="w-full accent-blue-500 bg-slate-800 rounded-lg">
+      </div>
+
+      <!-- 網格與座標軸 -->
+      <div class="flex items-center justify-between pt-2">
+        <span class="text-xs text-slate-300">顯示地面網格</span>
+        <input type="checkbox" checked onchange="toggleGrid(this.checked)" class="w-4 h-4 accent-blue-600 rounded">
+      </div>
+
+      <div class="pt-2 border-t border-slate-800 flex justify-end">
+        <button onclick="togglePanel('settings-modal')" class="bg-blue-600 text-white text-xs font-medium px-5 py-2.5 rounded-xl hover:bg-blue-500">關閉</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Three.js 主邏輯 -->
+  <script>
+    let scene, camera, renderer, controls, currentModel;
+    let gridHelper, ambientLight, dirLight;
+    let isAutoRotate = false;
+    let isWireframe = false;
+    let clock = new THREE.Clock();
+
+    function initEngine() {
+      const container = document.getElementById('canvas-container');
+      
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0f172a);
+
+      camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(5, 5, 5);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.shadowMap.enabled = true;
+      container.appendChild(renderer.domElement);
+
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+
+      ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+      scene.add(ambientLight);
+
+      dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+      dirLight.position.set(10, 20, 15);
+      scene.add(dirLight);
+
+      gridHelper = new THREE.GridHelper(20, 20, 0x3b82f6, 0x334155);
+      gridHelper.position.y = -0.01;
+      scene.add(gridHelper);
+
+      window.addEventListener('resize', onWindowResize);
+      animate();
+
+      // 預設載入同目錄下的 24_7_2026.glb
+      loadGLTFUrl('24_7_2026.glb');
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      if (controls) {
+        controls.autoRotate = isAutoRotate;
+        controls.update();
+      }
+      renderer.render(scene, camera);
+    }
+
+    function loadGLTFUrl(url, filename = '24_7_2026.glb') {
+      showLoading(true, `載入 ${filename}...`);
+      
+      const loader = new THREE.GLTFLoader();
+      loader.load(url, function (gltf) {
+        if (currentModel) scene.remove(currentModel);
+
+        currentModel = gltf.scene;
+
+        // 計算置中與鏡頭最佳距離
+        const box = new THREE.Box3().setFromObject(currentModel);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+
+        currentModel.position.sub(center);
+        scene.add(currentModel);
+
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const fov = camera.fov * (Math.PI / 180);
+        let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * 2.2;
+        cameraZ = Math.max(cameraZ, 2);
+
+        camera.position.set(cameraZ * 0.8, cameraZ * 0.6, cameraZ);
+        camera.lookAt(0, 0, 0);
+        controls.target.set(0, 0, 0);
+        controls.update();
+
+        // 面數與頂點統計
+        let totalVertices = 0, totalFaces = 0;
+        currentModel.traverse((child) => {
+          if (child.isMesh && child.geometry) {
+            totalVertices += child.geometry.attributes.position ? child.geometry.attributes.position.count : 0;
+            totalFaces += child.geometry.index ? child.geometry.index.count / 3 : (child.geometry.attributes.position ? child.geometry.attributes.position.count / 3 : 0);
+          }
+        });
+
+        document.getElementById('info-faces').innerText = Math.round(totalFaces).toLocaleString();
+        document.getElementById('info-vertices').innerText = totalVertices.toLocaleString();
+
+        showLoading(false);
+      }, 
+      function (xhr) {
+        if (xhr.lengthComputable) {
+          const percent = Math.round((xhr.loaded / xhr.total) * 100);
+          document.getElementById('loading-text').innerText = `讀取模型中 ${percent}%...`;
+        }
+      },
+      function (error) {
+        console.error('GLTF 載入失敗:', error);
+        document.getElementById('loading-text').innerText = '預設模型載入失敗，請點選右上角手動選擇檔案';
+      });
+    }
+
+    function launchAR() {
+      const mv = document.getElementById('mv-ar');
+      if (mv && mv.activateAR) mv.activateAR();
+      else alert('您的裝置或瀏覽器不支援 WebAR。');
+    }
+
+    function resetCamera() {
+      if (!currentModel) return;
+      const box = new THREE.Box3().setFromObject(currentModel);
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      camera.position.set(maxDim * 1.5, maxDim * 1.2, maxDim * 1.8);
+      controls.target.set(0, 0, 0);
+      controls.update();
+    }
+
+    function toggleAutoRotate() {
+      isAutoRotate = !isAutoRotate;
+      document.getElementById('btn-auto-rotate').classList.toggle('text-blue-400', isAutoRotate);
+    }
+
+    function toggleWireframe() {
+      isWireframe = !isWireframe;
+      if (currentModel) {
+        currentModel.traverse((child) => {
+          if (child.isMesh && child.material) {
+            if (Array.isArray(child.material)) child.material.forEach(m => m.wireframe = isWireframe);
+            else child.material.wireframe = isWireframe;
+          }
+        });
+      }
+      document.getElementById('btn-wireframe').classList.toggle('text-blue-400', isWireframe);
+    }
+
+    function setBackground(type) {
+      if (type === 'dark') scene.background = new THREE.Color(0x0f172a);
+      if (type === 'light') scene.background = new THREE.Color(0xf8fafc);
+      if (type === 'gradient') scene.background = new THREE.Color(0x09111e);
+    }
+
+    function updateLightIntensity(val) {
+      if (ambientLight) ambientLight.intensity = parseFloat(val);
+      document.getElementById('light-val').innerText = val;
+    }
+
+    function toggleGrid(show) { if (gridHelper) gridHelper.visible = show; }
+
+    function togglePanel(id) {
+      document.getElementById(id).classList.toggle('hidden');
+    }
+
+    function showLoading(show, text = '') {
+      const el = document.getElementById('loading-bar-container');
+      if (text) document.getElementById('loading-text').innerText = text;
+      el.classList.toggle('hidden', !show);
+    }
+
+    function takeScreenshot() {
+      renderer.render(scene, camera);
+      const dataUrl = renderer.domElement.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `3D_Screenshot.png`;
+      link.href = dataUrl;
+      link.click();
+    }
+
+    window.onload = () => {
+      initEngine();
+      lucide.createIcons();
+
+      document.getElementById('file-input').addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          const file = e.target.files[0];
+          document.getElementById('file-title').innerText = file.name;
+          const url = URL.createObjectURL(file);
+          document.getElementById('mv-ar').src = url;
+          loadGLTFUrl(url, file.name);
+        }
+      });
+    };
+  </script>
+</body>
+</html>
