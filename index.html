@@ -3,152 +3,165 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>尊貴住宅放盤 - VR 360 睇樓</title>
+  <title>輝英VR 睇樓網 - 友愛邨 愛智樓</title>
   
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Three.js 3D 引擎 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <!-- 圖示庫 -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
-    body { background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", sans-serif; touch-action: none; }
+    body { background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", sans-serif; touch-action: none; overflow: hidden; }
     .glass-btn { background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); }
+    /* 自訂滾動條 */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
   </style>
 </head>
-<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+<body class="text-slate-800 antialiased h-screen flex flex-col">
 
-  <nav class="bg-white border-b border-slate-200 sticky top-0 z-30 px-4 py-3 shadow-sm shrink-0">
+  <!-- 頂部 Navigation Bar -->
+  <nav class="bg-white border-b border-slate-200 shrink-0 z-30 px-4 py-3 shadow-sm">
     <div class="max-w-7xl mx-auto flex items-center justify-between">
       <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-lg bg-blue-600 text-white font-black flex items-center justify-center text-lg">地</div>
-        <span class="font-bold text-lg text-slate-900 tracking-tight">好地產 VR 睇樓網</span>
+        <div class="w-8 h-8 rounded-lg bg-orange-600 text-white font-black flex items-center justify-center text-lg">家</div>
+        <span class="font-bold text-lg text-slate-900 tracking-tight">輝英VR 睇樓網</span>
       </div>
-      <div class="text-xs text-slate-500 hidden sm:block">廣告日期：03/06/2026 • 樓盤編號：#2472026</div>
+      <div class="text-xs text-slate-500 hidden sm:block">感恩日期：無價 • 專屬編號：#LOVE</div>
     </div>
   </nav>
 
-  <main class="max-w-7xl mx-auto p-3 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow">
-    
-    <section class="lg:col-span-8 flex flex-col gap-3">
-      <div class="flex items-center gap-2 overflow-x-auto pb-1 text-sm font-medium">
-        <button class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-sm flex items-center gap-1.5 shrink-0">
-          <i data-lucide="box" class="w-4 h-4"></i> VR/3D 裝修睇樓
+  <!-- 主內容區域 -->
+  <main class="max-w-7xl mx-auto w-full p-3 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow overflow-y-auto">
+
+    <!-- ==================== 左側：3D VR 睇樓主視窗 ==================== -->
+    <section class="lg:col-span-8 flex flex-col gap-3 h-full min-h-[400px]">
+      
+      <!-- 頂部分頁 Tab 切換按鈕 -->
+      <div class="flex items-center gap-2 overflow-x-auto pb-1 text-sm font-medium shrink-0">
+        <button class="bg-orange-600 text-white px-4 py-2 rounded-lg shadow-sm flex items-center gap-1.5 shrink-0">
+          <i data-lucide="box" class="w-4 h-4"></i> VR 360° 回憶空間
         </button>
-        <button class="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 px-4 py-2 rounded-lg shrink-0">相片 (12)</button>
-        <button class="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 px-4 py-2 rounded-lg shrink-0">平面圖 (2)</button>
+        <button class="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 px-4 py-2 rounded-lg shrink-0">
+          家庭相片
+        </button>
       </div>
 
-      <!-- 3D 畫布區塊 -->
-      <div class="relative w-full h-[450px] sm:h-[550px] bg-slate-900 rounded-2xl overflow-hidden shadow-lg border border-slate-200">
+      <!-- 3D 展示主大框 -->
+      <div class="relative w-full flex-grow bg-slate-900 rounded-2xl overflow-hidden shadow-lg border border-slate-200 group">
+        
+        <!-- Three.js Canvas -->
         <div id="canvas-container" class="w-full h-full cursor-grab active:cursor-grabbing"></div>
 
-        <!-- 載入中遮罩 -->
+        <!-- 3D 載入中動畫 -->
         <div id="loading-overlay" class="absolute inset-0 bg-slate-900/90 backdrop-blur-sm flex flex-col items-center justify-center text-white z-40 transition-opacity duration-500">
-          <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p id="loading-text" class="text-sm font-medium text-slate-200">載入 3D 空間資料中...</p>
+          <div class="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p id="loading-text" class="text-sm font-medium text-slate-200">正在進入 友愛邨 愛智樓 回憶中...</p>
         </div>
 
         <!-- 左上狀態標籤 -->
-        <div class="absolute top-4 left-4 z-10 bg-slate-900/80 backdrop-blur text-white text-xs px-3 py-1.5 rounded-full border border-white/20 flex items-center gap-2">
+        <div class="absolute top-4 left-4 z-10 bg-slate-900/80 backdrop-blur text-white text-xs px-3 py-1.5 rounded-full border border-white/20 flex items-center gap-2 pointer-events-none">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span id="status-text">360° 環繞睇樓</span>
+          <span id="status-text">360° 環繞檢視模式</span>
         </div>
 
-        <!-- 十字微調盤 (僅在漫遊模式顯示) -->
+        <!-- D-Pad 十字微調盤 (僅在漫遊模式顯示) -->
         <div id="d-pad" class="hidden absolute right-4 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-1.5 glass-btn p-2 rounded-2xl">
-          <button onclick="panCamera(0, 0.05)" class="p-2.5 rounded-xl hover:bg-white/20 text-white active:scale-90 transition"><i data-lucide="chevron-up" class="w-5 h-5"></i></button>
+          <button onclick="panCamera(0, 0.05)" class="p-3 rounded-xl hover:bg-white/20 text-white active:scale-90 transition" title="抬頭"><i data-lucide="chevron-up" class="w-5 h-5"></i></button>
           <div class="flex gap-1.5">
-            <button onclick="panCamera(0.05, 0)" class="p-2.5 rounded-xl hover:bg-white/20 text-white active:scale-90 transition"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
-            <button onclick="resetPan()" class="p-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold shadow-lg w-10 h-10 flex items-center justify-center">平視</button>
-            <button onclick="panCamera(-0.05, 0)" class="p-2.5 rounded-xl hover:bg-white/20 text-white active:scale-90 transition"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
+            <button onclick="panCamera(0.05, 0)" class="p-3 rounded-xl hover:bg-white/20 text-white active:scale-90 transition" title="向左看"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
+            <button onclick="resetPan()" class="p-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-[10px] font-bold shadow-lg w-11 h-11 flex items-center justify-center">平視</button>
+            <button onclick="panCamera(-0.05, 0)" class="p-3 rounded-xl hover:bg-white/20 text-white active:scale-90 transition" title="向右看"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
           </div>
-          <button onclick="panCamera(0, -0.05)" class="p-2.5 rounded-xl hover:bg-white/20 text-white active:scale-90 transition"><i data-lucide="chevron-down" class="w-5 h-5"></i></button>
+          <button onclick="panCamera(0, -0.05)" class="p-3 rounded-xl hover:bg-white/20 text-white active:scale-90 transition" title="低頭"><i data-lucide="chevron-down" class="w-5 h-5"></i></button>
         </div>
 
-        <!-- 底部控制列 -->
-        <div class="absolute bottom-4 left-0 right-0 z-10 px-4 flex justify-between items-end pointer-events-none">
-          <!-- 房間跳躍按鈕 -->
-          <div class="flex gap-2 pointer-events-auto">
-            <button onclick="flyToRoom('livingRoom')" class="glass-btn text-white text-xs px-3 py-1.5 rounded-full hover:bg-slate-700 transition">客廳</button>
-            <button onclick="flyToRoom('bedroom')" class="glass-btn text-white text-xs px-3 py-1.5 rounded-full hover:bg-slate-700 transition">睡房</button>
-            <button onclick="flyToRoom('kitchen')" class="glass-btn text-white text-xs px-3 py-1.5 rounded-full hover:bg-slate-700 transition">廚房</button>
-          </div>
-
-          <!-- 右下角功能鈕 -->
-          <div class="flex items-center gap-2 pointer-events-auto">
-            <button onclick="toggleWalkMode()" id="btn-walk" class="glass-btn text-emerald-400 text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 hover:bg-slate-800 transition">
-              <i data-lucide="footprints" class="w-4 h-4"></i><span class="hidden sm:inline">漫遊 (WASD)</span>
-            </button>
-            <button onclick="adjustExposure()" class="glass-btn text-amber-400 p-2 rounded-xl hover:bg-slate-800 transition" title="調亮/調暗">
-              <i data-lucide="sun" class="w-5 h-5"></i>
-            </button>
-            <button onclick="flyToRoom('livingRoom')" class="glass-btn text-white p-2 rounded-xl hover:bg-slate-800 transition" title="重置">
-              <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
-            </button>
-          </div>
+        <!-- 畫面底部控制鈕 (漫遊 / 光暗 / 重置) -->
+        <div class="absolute bottom-4 right-4 z-10 flex items-center gap-2">
+          <button onclick="toggleWalkMode()" id="btn-walk" class="glass-btn text-emerald-400 text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-800 transition shadow-lg">
+            <i data-lucide="footprints" class="w-4 h-4"></i>
+            <span>漫遊模式 (WASD)</span>
+          </button>
+          <button onclick="adjustExposure()" class="glass-btn text-amber-400 p-2.5 rounded-xl hover:bg-slate-800 transition shadow-lg" title="調亮/調暗">
+            <i data-lucide="sun" class="w-5 h-5"></i>
+          </button>
+          <button onclick="resetCamera()" class="glass-btn text-white p-2.5 rounded-xl hover:bg-slate-800 transition shadow-lg" title="重置視角">
+            <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+          </button>
         </div>
       </div>
     </section>
 
-    <section class="lg:col-span-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col space-y-6">
+    <!-- ==================== 右側：樓盤與溫馨資訊 ==================== -->
+    <section class="lg:col-span-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col space-y-6 h-fit">
+      
       <div class="border-b border-slate-100 pb-4">
         <div class="flex items-baseline justify-between">
-          <span class="text-xs font-semibold uppercase text-orange-600 bg-orange-50 px-2 py-0.5 rounded">售</span>
-          <span class="text-3xl font-extrabold text-orange-600">$1,380 萬</span>
+          <span class="text-xs font-semibold uppercase text-orange-600 bg-orange-50 px-2 py-0.5 rounded">無價之寶</span>
+          <span class="text-3xl font-extrabold text-orange-600">$1212 萬億</span>
         </div>
-        <div class="mt-2 bg-sky-50 text-sky-700 text-xs px-3 py-2 rounded-xl flex items-center justify-between border border-sky-100">
-          <span>月供 約 $48,570 | 首期 276 萬</span>
-          <i data-lucide="chevron-right" class="w-4 h-4"></i>
+        <div class="mt-3 bg-red-50 text-red-700 text-sm font-medium px-4 py-3 rounded-xl flex items-center justify-between border border-red-100 shadow-inner">
+          <span>月供 : 阿爸一人 | 首期 : 2舊叉燒</span>
+          <i data-lucide="heart" class="w-5 h-5 fill-red-500 text-red-500"></i>
         </div>
       </div>
 
-      <div class="grid grid-cols-2 gap-2">
-        <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md text-sm transition">按揭申請</button>
-        <button class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-md text-sm transition flex items-center justify-center gap-1">
-          <i data-lucide="phone" class="w-4 h-4"></i> 聯絡代理
-        </button>
-      </div>
-
+      <!-- 關鍵數據 Summary -->
       <div>
         <div class="flex items-baseline gap-2 mb-4">
           <span class="text-sm text-slate-500">實用面積</span>
-          <span class="text-2xl font-bold text-slate-900">578 呎</span>
-          <span class="text-sm font-semibold text-orange-600 ml-auto">售 $23,875/呎</span>
+          <span class="text-2xl font-bold text-slate-900">378 呎</span>
+          <span class="text-sm font-semibold text-slate-400 ml-auto">35.12 m²</span>
         </div>
+
+        <!-- 四格數據網格 -->
         <div class="grid grid-cols-4 gap-2 text-center py-4 bg-slate-50 rounded-xl border border-slate-100">
-          <div><p class="text-[11px] text-slate-400">房數</p><p class="font-bold text-slate-800">2房</p></div>
-          <div><p class="text-[11px] text-slate-400">實用率</p><p class="font-bold text-slate-800">-</p></div>
-          <div><p class="text-[11px] text-slate-400">方向</p><p class="font-bold text-slate-800">東南</p></div>
-          <div><p class="text-[11px] text-slate-400">樓齡</p><p class="font-bold text-slate-800">4年</p></div>
+          <div>
+            <p class="text-[11px] text-slate-400">屋邨</p>
+            <p class="text-sm font-bold text-slate-800">友愛邨</p>
+          </div>
+          <div>
+            <p class="text-[11px] text-slate-400">座數</p>
+            <p class="text-sm font-bold text-slate-800">愛智樓</p>
+          </div>
+          <div>
+            <p class="text-[11px] text-slate-400">方向</p>
+            <p class="text-sm font-bold text-slate-800">溫暖</p>
+          </div>
+          <div>
+            <p class="text-[11px] text-slate-400">樓齡</p>
+            <p class="text-sm font-bold text-slate-800">34年左右</p>
+          </div>
         </div>
       </div>
       
-      <div class="text-[11px] text-slate-400 border-t border-slate-100 pt-3">
-        免責聲明：本頁面 VR 睇樓模型僅供參考，所有資料以現場交訂為準。
+      <!-- 溫馨感言 / 真正的心意 -->
+      <div class="text-sm text-slate-700 bg-orange-50/50 p-4 rounded-xl border border-orange-100 leading-relaxed text-justify space-y-3">
+        <p class="font-bold text-orange-700 text-base mb-1">免責聲明：</p>
+        <p>回望呢3X年，為咗建立我哋呢個家，你哋真係捱咗好多苦。由後生捱到依家，每一磚每一瓦，都係你哋用汗水同心血換返嚟嘅。我好明白呢一切 辛苦得嚟，絕對得來不易。</p>
+        <p>多謝你哋咁多年嚟為呢個家遮風擋雨，將最好嘅都留畀我哋。依家個家已經安穩落嚟，你哋嘅重擔係時候放低少少。辛苦晒你哋，</p>
+        <p class="font-bold text-orange-600">多謝！多謝！多謝！多謝你哋將最好嘅都留畀我。</p>
+        <p class="text-lg font-black text-red-600 text-center pt-2">爸媽，我愛你哋 I LOVE YOU ❤️</p>
       </div>
+
     </section>
+
   </main>
 
+  <!-- 3D JavaScript 邏輯引擎 -->
   <script>
-    // 全局變數
+    // 核心變數
     let scene, camera, renderer, controls, currentModel;
     let exposureIndex = 0;
     const exposures = [1.5, 2.0, 0.8, 1.0]; // 光暗循環數值
+    
+    // 漫遊模式變數
     let isWalkMode = false;
-
-    // 房間座標設定 (修改這些數值可精準對應你的房屋)
-    const rooms = {
-      livingRoom: { pos: [0, 1.5, 4], target: [0, 1.5, 0] },
-      bedroom:    { pos: [3, 1.5, -2], target: [3, 1.5, -5] },
-      kitchen:    { pos: [-2, 1.5, 1], target: [-5, 1.5, 1] }
-    };
-
-    // WASD 漫遊控制參數
-    let moveForward = false;
-    let moveBackward = false;
-    let moveLeft = false;
-    let moveRight = false;
+    let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
     const velocity = new THREE.Vector3();
     const direction = new THREE.Vector3();
     let prevTime = performance.now();
@@ -156,14 +169,13 @@
     function initEngine() {
       const container = document.getElementById('canvas-container');
 
-      // 1. 場景與相機
+      // 1. 建立場景與相機
       scene = new THREE.Scene();
       scene.background = new THREE.Color(0xe2e8f0);
       
       camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
-      camera.position.set(0, 1.5, 5);
-
-      // 2. 渲染器設定 (支援高光動態還原)
+      
+      // 2. 渲染器設定 (開啟高動態真實色彩)
       renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
       renderer.setPixelRatio(window.devicePixelRatio);
       renderer.setSize(container.clientWidth, container.clientHeight);
@@ -180,13 +192,11 @@
       controls.maxDistance = 100;
 
       // 4. 超強補光系統 (解決黑屏)
-      const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+      const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
       scene.add(ambientLight);
-      
       const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5);
       hemiLight.position.set(0, 20, 0);
       scene.add(hemiLight);
-
       const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
       dirLight.position.set(10, 10, 10);
       scene.add(dirLight);
@@ -197,7 +207,7 @@
       // 啟動動畫迴圈
       animate();
 
-      // 載入模型 (加入防預覽報錯機制)
+      // 載入模型或生成測試房間
       if (window.location.protocol === 'blob:' || window.location.protocol === 'file:') {
         createFallbackRoom();
       } else {
@@ -205,6 +215,7 @@
       }
     }
 
+    // 載入 3D 模型
     function loadGLTFModel(url) {
       const loader = new THREE.GLTFLoader();
       loader.load(url, 
@@ -212,7 +223,7 @@
           if (currentModel) scene.remove(currentModel);
           currentModel = gltf.scene;
 
-          // 核心修復：雙面渲染與低金屬度，徹底解決室內黑屏問題
+          // 核心修復：強制雙面渲染與低金屬度，徹底解決室內外黑屏
           currentModel.traverse((child) => {
             if (child.isMesh && child.material) {
               if (Array.isArray(child.material)) {
@@ -237,30 +248,18 @@
 
           document.getElementById('loading-overlay').classList.add('opacity-0', 'pointer-events-none');
           
-          // 模型載入完畢，直接飛進室內客廳！
-          flyToRoom('livingRoom');
+          // 載入完畢，直接進入正中心
+          resetCamera();
         }, 
         undefined, 
         function (error) {
           console.error('載入失敗:', error);
-          createFallbackRoom(); // 若失敗則顯示測試房間
+          createFallbackRoom();
         }
       );
     }
 
-    function flyToRoom(roomKey) {
-      const r = rooms[roomKey];
-      if(!r) return;
-      camera.position.set(r.pos[0], r.pos[1], r.pos[2]);
-      controls.target.set(r.target[0], r.target[1], r.target[2]);
-      controls.update();
-    }
-
-    function adjustExposure() {
-      exposureIndex = (exposureIndex + 1) % exposures.length;
-      renderer.toneMappingExposure = exposures[exposureIndex];
-    }
-
+    // 切換漫遊模式與 360 環繞模式
     function toggleWalkMode() {
       isWalkMode = !isWalkMode;
       const btnWalk = document.getElementById('btn-walk');
@@ -268,21 +267,34 @@
       const statusText = document.getElementById('status-text');
 
       if (isWalkMode) {
-        btnWalk.innerHTML = `<i data-lucide="orbit" class="w-4 h-4"></i><span class="hidden sm:inline">退出漫遊</span>`;
+        btnWalk.innerHTML = `<i data-lucide="orbit" class="w-4 h-4"></i><span>切換為 360° 模式</span>`;
         btnWalk.classList.replace('text-emerald-400', 'text-blue-400');
         dPad.classList.remove('hidden');
         statusText.innerText = "🚶 WASD 漫遊中";
-        resetPan(); // 進入時強制平視
+        resetPan(); // 強制平視
       } else {
-        btnWalk.innerHTML = `<i data-lucide="footprints" class="w-4 h-4"></i><span class="hidden sm:inline">漫遊 (WASD)</span>`;
+        btnWalk.innerHTML = `<i data-lucide="footprints" class="w-4 h-4"></i><span>漫遊模式 (WASD)</span>`;
         btnWalk.classList.replace('text-blue-400', 'text-emerald-400');
         dPad.classList.add('hidden');
-        statusText.innerText = "360° 環繞睇樓";
+        statusText.innerText = "360° 環繞檢視模式";
       }
       lucide.createIcons();
     }
 
-    // D-Pad 微調視角 (Yaw & Pitch)
+    // 調整光暗
+    function adjustExposure() {
+      exposureIndex = (exposureIndex + 1) % exposures.length;
+      renderer.toneMappingExposure = exposures[exposureIndex];
+    }
+
+    // 視角重置 (回到房屋中心點)
+    function resetCamera() {
+      camera.position.set(0, 1.2, 3.5);
+      controls.target.set(0, 1.2, 0);
+      controls.update();
+    }
+
+    // 十字盤 D-Pad 視角微調 (Yaw & Pitch)
     function panCamera(deltaYaw, deltaPitch) {
       if(!isWalkMode) return;
       
@@ -292,26 +304,25 @@
       
       spherical.theta -= deltaYaw; // 左右
       spherical.phi -= deltaPitch; // 上下
-      
-      // 限制上下看角度，避免翻轉
-      spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
+      spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi)); // 限制上下看角度
       
       const newTarget = new THREE.Vector3().setFromSpherical(spherical).add(camera.position);
       controls.target.copy(newTarget);
       controls.update();
     }
 
+    // 十字盤中間按鈕：恢復平視
     function resetPan() {
-      // 強制水平平視 (Pitch = 90度/PI_2)
       const spherical = new THREE.Spherical().setFromVector3(
         camera.position.clone().sub(controls.target).negate()
       );
-      spherical.phi = Math.PI / 2;
+      spherical.phi = Math.PI / 2; // 強制水平 90 度
       const newTarget = new THREE.Vector3().setFromSpherical(spherical).add(camera.position);
       controls.target.copy(newTarget);
       controls.update();
     }
 
+    // WASD 鍵盤控制綁定
     function setupWASD() {
       document.addEventListener('keydown', (event) => {
         if (!isWalkMode) return;
@@ -340,7 +351,7 @@
       renderer.setSize(container.clientWidth, container.clientHeight);
     }
 
-    // 主渲染與移動運算
+    // 核心動畫與物理移動運算
     function animate() {
       requestAnimationFrame(animate);
       
@@ -348,7 +359,7 @@
       const delta = (time - prevTime) / 1000;
       
       if (isWalkMode) {
-        // WASD 物理滑動計算
+        // FPS 物理滑動計算
         velocity.x -= velocity.x * 10.0 * delta;
         velocity.z -= velocity.z * 10.0 * delta;
         
@@ -360,7 +371,7 @@
         if (moveForward || moveBackward) velocity.z -= direction.z * speed * delta;
         if (moveLeft || moveRight) velocity.x -= direction.x * speed * delta;
 
-        // 計算攝影機當前朝向的水平分量 (去除 Y 軸傾斜)
+        // 計算攝影機當前朝向的水平分量 (確保移動時不會飛天遁地)
         const forwardVector = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
         forwardVector.y = 0;
         forwardVector.normalize();
@@ -369,7 +380,6 @@
         rightVector.y = 0;
         rightVector.normalize();
 
-        // 依據朝向套用移動
         const moveVec = new THREE.Vector3()
             .addScaledVector(rightVector, velocity.x * delta)
             .addScaledVector(forwardVector, velocity.z * delta);
@@ -383,7 +393,7 @@
       renderer.render(scene, camera);
     }
 
-    // 測試環境防錯替代方案 (預覽視窗用)
+    // 預覽環境防錯 (生出一個虛擬空間讓你直接測試功能)
     function createFallbackRoom() {
       const boxGeo = new THREE.BoxGeometry(10, 3, 10);
       const boxMat = new THREE.MeshLambertMaterial({ color: 0xcccccc, side: THREE.BackSide });
@@ -394,8 +404,17 @@
       const grid = new THREE.GridHelper(10, 10, 0x888888, 0x444444);
       scene.add(grid);
 
+      // 加幾根彩色柱子當參照物
+      const colors = [0xff9999, 0x99ff99, 0x9999ff, 0xffff99];
+      const positions = [[-3, 0, -3], [3, 0, -3], [-3, 0, 3], [3, 0, 3]];
+      for(let i=0; i<4; i++) {
+          const col = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 3), new THREE.MeshLambertMaterial({color: colors[i]}));
+          col.position.set(positions[i][0], 1.5, positions[i][2]);
+          scene.add(col);
+      }
+
       document.getElementById('loading-overlay').classList.add('opacity-0', 'pointer-events-none');
-      flyToRoom('livingRoom');
+      resetCamera();
     }
 
     window.onload = () => {
