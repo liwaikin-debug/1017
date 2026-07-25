@@ -14,16 +14,6 @@
   <style>
     body { background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", sans-serif; touch-action: none; overflow: hidden; }
     .glass-btn { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1); }
-    /* 自訂導覽滑桿樣式 */
-    input[type=range].tour-slider {
-      -webkit-appearance: none; width: 100%; background: transparent;
-    }
-    input[type=range].tour-slider::-webkit-slider-thumb {
-      -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: #ffffff; cursor: pointer; margin-top: -8px; box-shadow: 0 0 10px rgba(0,0,0,0.5);
-    }
-    input[type=range].tour-slider::-webkit-slider-runnable-track {
-      width: 100%; height: 4px; cursor: pointer; background: rgba(255,255,255,0.3); border-radius: 2px;
-    }
   </style>
 </head>
 <body class="text-slate-800 antialiased min-h-screen flex flex-col">
@@ -50,21 +40,36 @@
         
         <div id="canvas-container" class="w-full h-full"></div>
 
+        <!-- 載入中畫面 -->
         <div id="loading-overlay" class="absolute inset-0 bg-slate-900/90 backdrop-blur-sm flex flex-col items-center justify-center text-white z-20">
           <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
           <p id="loading-text" class="text-sm font-medium text-slate-200">正在準備驚喜，請稍候...</p>
         </div>
 
-        <div class="absolute top-4 left-4 z-10 bg-slate-900/70 backdrop-blur text-white text-xs px-3 py-1.5 rounded-full border border-white/20 flex items-center gap-1.5">
+        <!-- 左上角狀態 -->
+        <div class="absolute top-4 left-4 z-10 bg-slate-900/70 backdrop-blur text-white text-xs px-3 py-1.5 rounded-full border border-white/20 flex items-center gap-1.5 shadow-md">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span id="status-badge">VR 360° 互動漫遊中</span>
+          <span id="status-badge">第一人稱漫遊 (WASD)</span>
         </div>
 
-        <!-- ================= 右下角常規控制 (導覽時隱藏) ================= -->
+        <!-- ================= 底部中央：房間一鍵跳躍 ================= -->
+        <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex gap-2">
+          <button onclick="jumpToRoom('living')" class="glass-btn hover:bg-blue-600 active:scale-95 text-white px-5 py-2 rounded-full text-xs font-bold transition shadow-lg tracking-widest">
+            客廳
+          </button>
+          <button onclick="jumpToRoom('bed')" class="glass-btn hover:bg-blue-600 active:scale-95 text-white px-5 py-2 rounded-full text-xs font-bold transition shadow-lg tracking-widest">
+            睡房
+          </button>
+          <button onclick="jumpToRoom('kitchen')" class="glass-btn hover:bg-blue-600 active:scale-95 text-white px-5 py-2 rounded-full text-xs font-bold transition shadow-lg tracking-widest">
+            廚房
+          </button>
+        </div>
+
+        <!-- ================= 右下角控制 ================= -->
         <div id="normal-controls" class="absolute bottom-4 right-4 z-10 flex flex-col items-end gap-2">
           
-          <!-- D-Pad 十字鍵 (漫遊模式才顯示) -->
-          <div id="d-pad" class="hidden grid grid-cols-3 gap-1.5 p-2 glass-btn rounded-2xl mb-1 shadow-2xl">
+          <!-- D-Pad 十字鍵 (漫遊模式專屬) -->
+          <div id="d-pad" class="grid grid-cols-3 gap-1.5 p-2 glass-btn rounded-2xl mb-1 shadow-2xl">
             <div class="col-start-2">
               <button onpointerdown="startPan(0, 0.01)" onpointerup="stopPan()" onpointerleave="stopPan()" class="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center text-white active:bg-blue-500 transition"><i data-lucide="chevron-up"></i></button>
             </div>
@@ -84,40 +89,9 @@
 
           <!-- 功能列 -->
           <div class="flex items-center gap-2">
-            <button onclick="startTourMode()" class="glass-btn text-white text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-1.5 hover:bg-slate-800 transition">
-              <i data-lucide="play-circle" class="w-4 h-4 text-amber-400"></i>
-              <span>🎬 虛擬導覽</span>
-            </button>
-            <button onclick="toggleWalkMode()" id="btn-mode" class="glass-btn text-white text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-1.5 hover:bg-slate-800 transition">
-              <i data-lucide="footprints" class="w-4 h-4 text-emerald-400"></i>
-              <span>自由漫遊</span>
-            </button>
-            <button onclick="adjustLight()" class="glass-btn text-amber-300 p-2.5 rounded-xl hover:bg-slate-800 transition shadow-lg">
+            <button onclick="adjustLight()" class="glass-btn text-amber-300 p-3 rounded-xl hover:bg-slate-800 transition shadow-lg">
               <i data-lucide="sun" class="w-5 h-5"></i>
             </button>
-          </div>
-        </div>
-
-        <!-- ================= 底部中央：虛擬導覽時間軸 ================= -->
-        <div id="tour-controls" class="hidden absolute bottom-6 left-1/2 -translate-x-1/2 z-20 w-[95%] sm:w-[80%] max-w-[500px]">
-          <!-- 頂部進度膠囊 -->
-          <div class="flex justify-center mb-3">
-            <div class="bg-black/80 backdrop-blur-md text-white text-xs font-mono tracking-widest px-5 py-2 rounded-full border border-white/20 shadow-lg">
-              Frame <span id="tour-frame-text">1</span> of 800
-            </div>
-          </div>
-          <!-- 底部控制條 -->
-          <div class="bg-black/90 backdrop-blur-xl px-5 py-4 rounded-3xl border border-white/20 shadow-2xl flex items-center gap-4">
-            <button onclick="exitTourMode()" class="text-white text-sm font-bold whitespace-nowrap flex items-center gap-1 hover:text-slate-300 pr-3 border-r border-white/30">
-              <i data-lucide="arrow-left" class="w-5 h-5"></i> 返回
-            </button>
-            
-            <input type="range" id="tour-slider" min="0" max="800" value="0" class="tour-slider flex-grow" oninput="scrubTour(this.value)">
-            
-            <div class="flex items-center gap-2 pl-2">
-              <button onclick="stepTour(-10)" class="text-white p-2 rounded-full hover:bg-white/20 active:scale-90 bg-white/10"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
-              <button onclick="stepTour(10)" class="text-white p-2 rounded-full hover:bg-white/20 active:scale-90 bg-white/10"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
-            </div>
           </div>
         </div>
 
@@ -174,16 +148,12 @@
   <script>
     let scene, camera, renderer, controls, currentModel;
     let ambientLight;
-    let isWalk = false;
-    let isTourMode = false;
     let currentExposure = 1.0;
     
     // 長輩友善版：限制頭部轉動範圍 (45度)
     let cameraPitch = 0, cameraYaw = 0;
     const MAX_ANGLE = Math.PI / 4; // 45度
     let panInterval;
-
-    let tourCurve, targetCurve;
 
     function init3D() {
       const container = document.getElementById('canvas-container');
@@ -200,35 +170,17 @@
       renderer.toneMappingExposure = currentExposure;
       container.appendChild(renderer.domElement);
 
+      // 解除滑鼠隨意旋轉，強迫使用 WASD 或 十字鍵 (防止暈眩)
       controls = new THREE.OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = 0.03; 
-      controls.rotateSpeed = 0.3; 
+      controls.enableRotate = false; // 關閉滑鼠隨意拖曳旋轉
+      controls.enableZoom = false;   // 關閉滾輪縮放
+      controls.enablePan = false;    // 關閉右鍵平移
 
       ambientLight = new THREE.AmbientLight(0xffffff, 2.0);
       scene.add(ambientLight);
       scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.2));
-
-      // ====== 虛擬導覽：純水平行路軌跡 ======
-      // Y軸固定為 1.3 (平視高度)，模擬行路
-      tourCurve = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(0, 1.3, 4),    
-        new THREE.Vector3(2, 1.3, 2),    
-        new THREE.Vector3(2, 1.3, -2),   
-        new THREE.Vector3(-2, 1.3, -2),  
-        new THREE.Vector3(-2, 1.3, 2),   
-        new THREE.Vector3(0, 1.3, 4)     
-      ]);
-      
-      // 目標點：永遠看向同一個遠方目標 (例如電視方向，假設在 Z = -10 的位置)
-      targetCurve = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(0, 1.3, -10),
-        new THREE.Vector3(0, 1.3, -10),
-        new THREE.Vector3(0, 1.3, -10),
-        new THREE.Vector3(0, 1.3, -10),
-        new THREE.Vector3(0, 1.3, -10),
-        new THREE.Vector3(0, 1.3, -10)
-      ]);
 
       window.addEventListener('resize', onResize);
       animate();
@@ -236,7 +188,7 @@
       if (window.location.protocol === 'blob:' || window.location.protocol === 'file:') {
         createDemoRoom();
         document.getElementById('loading-overlay').classList.add('hidden');
-        resetCamera();
+        jumpToRoom('living');
       } else {
         loadGLTF('24_7_2026.glb');
       }
@@ -267,12 +219,14 @@
         const center = box.getCenter(new THREE.Vector3());
         currentModel.position.sub(center);
         scene.add(currentModel);
-        resetCamera();
+        
+        // 載入完成後直接面向大廳電視
+        jumpToRoom('living');
         document.getElementById('loading-overlay').classList.add('hidden');
       }, undefined, function (error) {
         createDemoRoom();
         document.getElementById('loading-overlay').classList.add('hidden');
-        resetCamera();
+        jumpToRoom('living');
       });
     }
 
@@ -284,67 +238,47 @@
       renderer.setSize(container.clientWidth, container.clientHeight);
     }
 
-    // ====== 🎬 虛擬導覽邏輯 ======
-    function startTourMode() {
-      isTourMode = true;
-      document.getElementById('normal-controls').classList.add('hidden');
-      document.getElementById('tour-controls').classList.remove('hidden');
-      document.getElementById('status-badge').innerText = "虛擬導覽播放中";
-      controls.enabled = false; 
-      scrubTour(0);
-      document.getElementById('tour-slider').value = 0;
+    // ====== 房間跳躍 (Y軸鎖死在 1.3 平視高度) ======
+    function jumpToRoom(room) {
+      cameraYaw = 0; 
+      cameraPitch = 0;
+      
+      if (room === 'living') {
+        camera.position.set(0, 1.3, 4);
+        controls.target.set(0, 1.3, -2); // 看向電視
+      } else if (room === 'bed') {
+        camera.position.set(3, 1.3, -2);
+        controls.target.set(3, 1.3, -5); // 看向床
+      } else if (room === 'kitchen') {
+        camera.position.set(-2, 1.3, -1);
+        controls.target.set(-4, 1.3, -1); // 看向廚房深處
+      }
+      
+      updateCameraTarget();
     }
 
-    function exitTourMode() {
-      isTourMode = false;
-      document.getElementById('normal-controls').classList.remove('hidden');
-      document.getElementById('tour-controls').classList.add('hidden');
-      document.getElementById('status-badge').innerText = isWalk ? "第一人稱漫遊 (WASD)" : "VR 360° 互動漫遊中";
-      controls.enabled = true;
-      if (!isWalk) resetCamera();
-    }
-
-    function scrubTour(value) {
-      document.getElementById('tour-frame-text').innerText = value;
-      const t = value / 800; // 0.0 到 1.0
-      const pos = tourCurve.getPointAt(t);
-      const tar = targetCurve.getPointAt(t);
-      camera.position.copy(pos);
-      controls.target.copy(tar);
-      controls.update();
-    }
-
-    function stepTour(amount) {
-      const slider = document.getElementById('tour-slider');
-      let val = parseInt(slider.value) + amount;
-      if(val < 0) val = 0;
-      if(val > 800) val = 800;
-      slider.value = val;
-      scrubTour(val);
-    }
-    // =============================
-
+    // ====== WASD 散步邏輯 (純平地) ======
     const keys = { w:false, a:false, s:false, d:false };
-    window.addEventListener('keydown', e => { if(isWalk && !isTourMode) keys[e.key.toLowerCase()] = true; });
-    window.addEventListener('keyup', e => { if(isWalk && !isTourMode) keys[e.key.toLowerCase()] = false; });
+    window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
+    window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
     function animate() {
       requestAnimationFrame(animate);
-      if (isWalk && !isTourMode) {
-        const speed = 0.02; // 極慢走路速度
-        const dir = new THREE.Vector3();
-        camera.getWorldDirection(dir);
-        dir.y = 0; dir.normalize(); // 鎖死 Y 軸，純水平移動
-        
-        const right = new THREE.Vector3();
-        right.crossVectors(camera.up, dir).normalize();
+      
+      const speed = 0.02; // 極慢走路速度
+      const dir = new THREE.Vector3();
+      camera.getWorldDirection(dir);
+      dir.y = 0; dir.normalize(); // 鎖死 Y 軸，純水平移動
+      
+      const right = new THREE.Vector3();
+      right.crossVectors(camera.up, dir).normalize();
 
-        if (keys.w) { camera.position.addScaledVector(dir, speed); controls.target.addScaledVector(dir, speed); }
-        if (keys.s) { camera.position.addScaledVector(dir, -speed); controls.target.addScaledVector(dir, -speed); }
-        if (keys.a) { camera.position.addScaledVector(right, speed); controls.target.addScaledVector(right, speed); }
-        if (keys.d) { camera.position.addScaledVector(right, -speed); controls.target.addScaledVector(right, -speed); }
-      }
-      if (controls && !isTourMode) controls.update();
+      if (keys.w) { camera.position.addScaledVector(dir, speed); controls.target.addScaledVector(dir, speed); }
+      if (keys.s) { camera.position.addScaledVector(dir, -speed); controls.target.addScaledVector(dir, -speed); }
+      if (keys.a) { camera.position.addScaledVector(right, speed); controls.target.addScaledVector(right, speed); }
+      if (keys.d) { camera.position.addScaledVector(right, -speed); controls.target.addScaledVector(right, -speed); }
+      
+      if (controls) controls.update();
       renderer.render(scene, camera);
     }
 
@@ -382,36 +316,9 @@
       controls.update();
     }
 
-    function toggleWalkMode() {
-      isWalk = !isWalk;
-      const btn = document.getElementById('btn-mode');
-      const dpad = document.getElementById('d-pad');
-      if (isWalk) {
-        camera.position.set(0, 1.3, 2);
-        cameraYaw = 0; cameraPitch = 0;
-        updateCameraTarget();
-        btn.innerHTML = `<i data-lucide="orbit" class="w-4 h-4 text-blue-400"></i><span>360° 模式</span>`;
-        document.getElementById('status-badge').innerText = "第一人稱漫遊 (WASD)";
-        dpad.classList.remove('hidden');
-      } else {
-        resetCamera();
-        btn.innerHTML = `<i data-lucide="footprints" class="w-4 h-4 text-emerald-400"></i><span>自由漫遊</span>`;
-        document.getElementById('status-badge').innerText = "VR 360° 互動漫遊中";
-        dpad.classList.add('hidden');
-      }
-      lucide.createIcons();
-    }
-
     function adjustLight() {
       currentExposure = currentExposure >= 2.0 ? 0.8 : currentExposure + 0.3;
       renderer.toneMappingExposure = currentExposure;
-    }
-
-    function resetCamera() {
-      if (!currentModel) return;
-      camera.position.set(0, 1.3, 4);
-      controls.target.set(0, 1.3, 0); // 平視
-      controls.update();
     }
 
     window.onload = () => {
