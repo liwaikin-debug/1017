@@ -2,34 +2,23 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>尊貴住宅放盤 - VR 360 睇樓</title>
   
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Three.js 3D 引擎 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-  <!-- 圖示庫 -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
-    body { background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", sans-serif; }
+    body { background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", sans-serif; touch-action: none; }
     .glass-btn { background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); }
-    /* 十字鍵按鈕樣式 */
-    .dpad-btn { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; background: rgba(255,255,255,0.1); transition: all 0.2s; }
-    .dpad-btn:hover { background: rgba(255,255,255,0.2); }
-    .dpad-btn:active { background: #3b82f6; transform: scale(0.95); }
-    /* 房間跳躍按鈕 */
-    .room-btn { background: rgba(255, 255, 255, 0.9); color: #1e293b; font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.2s; border: 1px solid #e2e8f0; }
-    .room-btn:hover { background: #3b82f6; color: white; border-color: #2563eb; }
   </style>
 </head>
 <body class="text-slate-800 antialiased min-h-screen flex flex-col">
 
-  <!-- 頂部地產網站 Navigation Bar -->
-  <nav class="bg-white border-b border-slate-200 sticky top-0 z-30 px-4 py-3 shadow-sm">
+  <nav class="bg-white border-b border-slate-200 sticky top-0 z-30 px-4 py-3 shadow-sm shrink-0">
     <div class="max-w-7xl mx-auto flex items-center justify-between">
       <div class="flex items-center gap-2">
         <div class="w-8 h-8 rounded-lg bg-blue-600 text-white font-black flex items-center justify-center text-lg">地</div>
@@ -39,445 +28,378 @@
     </div>
   </nav>
 
-  <!-- 主內容區域 Container -->
   <main class="max-w-7xl mx-auto p-3 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow">
-
-    <!-- ==================== 左側：3D VR 睇樓主視窗與切換籤 ==================== -->
-    <section class="lg:col-span-8 flex flex-col gap-3 h-full">
-      
-      <!-- 頂部分頁 Tab 切換按鈕 -->
+    
+    <section class="lg:col-span-8 flex flex-col gap-3">
       <div class="flex items-center gap-2 overflow-x-auto pb-1 text-sm font-medium">
         <button class="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-sm flex items-center gap-1.5 shrink-0">
           <i data-lucide="box" class="w-4 h-4"></i> VR/3D 裝修睇樓
         </button>
-        <button class="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 px-4 py-2 rounded-lg shrink-0">
-          相片 (12)
-        </button>
-        <button class="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 px-4 py-2 rounded-lg shrink-0">
-          平面圖 (2)
-        </button>
-        <button class="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 px-4 py-2 rounded-lg shrink-0">
-          單位影片
-        </button>
+        <button class="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 px-4 py-2 rounded-lg shrink-0">相片 (12)</button>
+        <button class="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 px-4 py-2 rounded-lg shrink-0">平面圖 (2)</button>
       </div>
 
-      <!-- 3D 展示主大框 (加大高度) -->
-      <div class="relative w-full h-[500px] lg:h-full min-h-[500px] bg-slate-900 rounded-2xl overflow-hidden shadow-lg border border-slate-200 flex flex-col">
-        
-        <!-- Three.js Canvas -->
-        <div id="canvas-container" class="w-full h-full cursor-grab active:cursor-grabbing flex-grow"></div>
+      <!-- 3D 畫布區塊 -->
+      <div class="relative w-full h-[450px] sm:h-[550px] bg-slate-900 rounded-2xl overflow-hidden shadow-lg border border-slate-200">
+        <div id="canvas-container" class="w-full h-full cursor-grab active:cursor-grabbing"></div>
 
-        <!-- 3D 載入中動畫 -->
-        <div id="loading-overlay" class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center text-white z-20">
-          <div class="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mb-3"></div>
-          <p id="loading-text" class="text-xs text-slate-300">正在進入 VR 360° 虛擬單位...</p>
+        <!-- 載入中遮罩 -->
+        <div id="loading-overlay" class="absolute inset-0 bg-slate-900/90 backdrop-blur-sm flex flex-col items-center justify-center text-white z-40 transition-opacity duration-500">
+          <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p id="loading-text" class="text-sm font-medium text-slate-200">載入 3D 空間資料中...</p>
         </div>
 
-        <!-- 左上角 VR 狀態 -->
-        <div class="absolute top-4 left-4 z-10 bg-slate-900/70 backdrop-blur text-white text-xs px-3 py-1.5 rounded-full border border-white/20 flex items-center gap-1.5">
+        <!-- 左上狀態標籤 -->
+        <div class="absolute top-4 left-4 z-10 bg-slate-900/80 backdrop-blur text-white text-xs px-3 py-1.5 rounded-full border border-white/20 flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span id="status-text">VR 360° 環繞檢視</span>
+          <span id="status-text">360° 環繞睇樓</span>
         </div>
 
-        <!-- 📍 底部房間跳躍導航 -->
-        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-2 w-max">
-          <button onclick="flyToRoom('livingRoom')" class="room-btn">客廳</button>
-          <button onclick="flyToRoom('bedroom')" class="room-btn">睡房</button>
-          <button onclick="flyToRoom('kitchen')" class="room-btn">廚房</button>
-          <button onclick="flyToRoom('balcony')" class="room-btn">露台</button>
+        <!-- 十字微調盤 (僅在漫遊模式顯示) -->
+        <div id="d-pad" class="hidden absolute right-4 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-1.5 glass-btn p-2 rounded-2xl">
+          <button onclick="panCamera(0, 0.05)" class="p-2.5 rounded-xl hover:bg-white/20 text-white active:scale-90 transition"><i data-lucide="chevron-up" class="w-5 h-5"></i></button>
+          <div class="flex gap-1.5">
+            <button onclick="panCamera(0.05, 0)" class="p-2.5 rounded-xl hover:bg-white/20 text-white active:scale-90 transition"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
+            <button onclick="resetPan()" class="p-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold shadow-lg w-10 h-10 flex items-center justify-center">平視</button>
+            <button onclick="panCamera(-0.05, 0)" class="p-2.5 rounded-xl hover:bg-white/20 text-white active:scale-90 transition"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
+          </div>
+          <button onclick="panCamera(0, -0.05)" class="p-2.5 rounded-xl hover:bg-white/20 text-white active:scale-90 transition"><i data-lucide="chevron-down" class="w-5 h-5"></i></button>
         </div>
 
-        <!-- 右下角控制群組 -->
-        <div class="absolute bottom-4 right-4 z-10 flex flex-col items-end gap-2">
-          
-          <!-- 十字微調盤 (僅漫遊模式顯示) -->
-          <div id="d-pad" class="hidden glass-btn p-1.5 rounded-xl flex-col items-center gap-1 mb-1 shadow-lg text-white">
-            <button onclick="adjustCameraAngle(0, 0.05)" class="dpad-btn" title="抬頭"><i data-lucide="chevron-up" class="w-5 h-5"></i></button>
-            <div class="flex gap-1">
-              <button onclick="adjustCameraAngle(-0.05, 0)" class="dpad-btn" title="向左看"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
-              <button onclick="resetPitch()" class="dpad-btn bg-blue-600/50" title="一鍵平視"><i data-lucide="scan-face" class="w-4 h-4"></i></button>
-              <button onclick="adjustCameraAngle(0.05, 0)" class="dpad-btn" title="向右看"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
-            </div>
-            <button onclick="adjustCameraAngle(0, -0.05)" class="dpad-btn" title="低頭"><i data-lucide="chevron-down" class="w-5 h-5"></i></button>
+        <!-- 底部控制列 -->
+        <div class="absolute bottom-4 left-0 right-0 z-10 px-4 flex justify-between items-end pointer-events-none">
+          <!-- 房間跳躍按鈕 -->
+          <div class="flex gap-2 pointer-events-auto">
+            <button onclick="flyToRoom('livingRoom')" class="glass-btn text-white text-xs px-3 py-1.5 rounded-full hover:bg-slate-700 transition">客廳</button>
+            <button onclick="flyToRoom('bedroom')" class="glass-btn text-white text-xs px-3 py-1.5 rounded-full hover:bg-slate-700 transition">睡房</button>
+            <button onclick="flyToRoom('kitchen')" class="glass-btn text-white text-xs px-3 py-1.5 rounded-full hover:bg-slate-700 transition">廚房</button>
           </div>
 
-          <!-- 主要控制列 -->
-          <div class="flex items-center gap-2">
-            <!-- 漫遊切換鈕 -->
-            <button onclick="toggleFPSMode()" id="btn-mode" class="glass-btn text-white text-xs font-semibold px-3 py-2 rounded-xl flex items-center gap-1.5 hover:bg-slate-800 transition shadow-lg">
-              <i data-lucide="footprints" class="w-4 h-4 text-emerald-400"></i>
-              <span>第一人稱漫遊 (WASD)</span>
+          <!-- 右下角功能鈕 -->
+          <div class="flex items-center gap-2 pointer-events-auto">
+            <button onclick="toggleWalkMode()" id="btn-walk" class="glass-btn text-emerald-400 text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 hover:bg-slate-800 transition">
+              <i data-lucide="footprints" class="w-4 h-4"></i><span class="hidden sm:inline">漫遊 (WASD)</span>
             </button>
-            <!-- 光暗調節 (太陽圖示) -->
-            <button onclick="adjustLight()" class="glass-btn text-amber-400 p-2 rounded-xl hover:bg-slate-800 transition shadow-lg" title="調整光暗 (調亮/調暗)">
-              <i data-lucide="sun" class="w-4 h-4"></i>
+            <button onclick="adjustExposure()" class="glass-btn text-amber-400 p-2 rounded-xl hover:bg-slate-800 transition" title="調亮/調暗">
+              <i data-lucide="sun" class="w-5 h-5"></i>
             </button>
-            <!-- 重置視角 -->
-            <button onclick="resetToCenter()" class="glass-btn text-white p-2 rounded-xl hover:bg-slate-800 transition shadow-lg" title="重置視角">
-              <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+            <button onclick="flyToRoom('livingRoom')" class="glass-btn text-white p-2 rounded-xl hover:bg-slate-800 transition" title="重置">
+              <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
             </button>
           </div>
         </div>
-
       </div>
-
-      <!-- 下方相片縮圖條 -->
-      <div class="flex items-center gap-2 overflow-x-auto py-1">
-        <div class="w-20 h-14 rounded-lg bg-blue-100 border-2 border-blue-600 flex-shrink-0 flex items-center justify-center text-blue-600 font-bold text-xs relative cursor-pointer overflow-hidden">
-          <span class="absolute inset-0 bg-blue-900/20"></span>
-          VR 睇樓
-        </div>
-        <div class="w-20 h-14 rounded-lg bg-slate-200 flex-shrink-0 cursor-pointer hover:opacity-80 transition bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=200')"></div>
-        <div class="w-20 h-14 rounded-lg bg-slate-200 flex-shrink-0 cursor-pointer hover:opacity-80 transition bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=200')"></div>
-        <div class="w-20 h-14 rounded-lg bg-slate-200 flex-shrink-0 cursor-pointer hover:opacity-80 transition bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1484154218962-a197022b5858?w=200')"></div>
-        <div class="w-20 h-14 rounded-lg bg-slate-200 flex-shrink-0 cursor-pointer hover:opacity-80 transition bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=200')"></div>
-      </div>
-
     </section>
 
-    <!-- ==================== 右側：樓盤資訊與價格邊欄 ==================== -->
-    <section class="lg:col-span-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col space-y-6 h-fit">
-      
-      <div class="space-y-5">
-        <!-- 售價 -->
-        <div class="border-b border-slate-100 pb-4">
-          <div class="flex items-baseline justify-between">
-            <span class="text-xs font-semibold uppercase text-orange-600 bg-orange-50 px-2 py-0.5 rounded">售</span>
-            <span class="text-3xl font-extrabold text-orange-600">$1,380 萬</span>
-          </div>
-          <div class="mt-2 bg-sky-50 text-sky-700 text-xs px-3 py-2 rounded-xl flex items-center justify-between border border-sky-100">
-            <span>月供 約 $48,570 | 首期 276 萬</span>
-            <i data-lucide="chevron-right" class="w-4 h-4"></i>
-          </div>
+    <section class="lg:col-span-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col space-y-6">
+      <div class="border-b border-slate-100 pb-4">
+        <div class="flex items-baseline justify-between">
+          <span class="text-xs font-semibold uppercase text-orange-600 bg-orange-50 px-2 py-0.5 rounded">售</span>
+          <span class="text-3xl font-extrabold text-orange-600">$1,380 萬</span>
         </div>
-
-        <!-- 關鍵數據 Summary -->
-        <div class="pt-2">
-          <div class="flex items-baseline gap-2 mb-4">
-            <span class="text-sm text-slate-500">實用面積</span>
-            <span class="text-2xl font-bold text-slate-900">578 呎</span>
-            <span class="text-sm font-semibold text-orange-600 ml-auto">售 $23,875/呎</span>
-          </div>
-
-          <!-- 四格數據網格 -->
-          <div class="grid grid-cols-4 gap-2 text-center py-4 bg-slate-50 rounded-xl border border-slate-100">
-            <div>
-              <p class="text-[11px] text-slate-400">房數</p>
-              <p class="text-base font-bold text-slate-800">2房</p>
-            </div>
-            <div>
-              <p class="text-[11px] text-slate-400">實用率</p>
-              <p class="text-base font-bold text-slate-800">-</p>
-            </div>
-            <div>
-              <p class="text-[11px] text-slate-400">方向</p>
-              <p class="text-base font-bold text-slate-800">東南</p>
-            </div>
-            <div>
-              <p class="text-[11px] text-slate-400">樓齡</p>
-              <p class="text-base font-bold text-slate-800">4年</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- 按揭與預約按鈕 -->
-        <div class="grid grid-cols-2 gap-2">
-          <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md shadow-blue-600/20 text-sm transition">
-            按揭申請
-          </button>
-          <button class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-md shadow-emerald-600/20 text-sm transition flex items-center justify-center gap-1">
-            <i data-lucide="phone" class="w-4 h-4"></i> 聯絡代理
-          </button>
-        </div>
-
-        <!-- 屋苑詳細說明 -->
-        <div class="space-y-2 text-xs text-slate-600 pt-2">
-          <div class="flex justify-between py-1 border-b border-slate-100">
-            <span class="text-slate-400">屋苑名稱</span>
-            <span class="font-medium text-slate-800">寶麗來精選單位</span>
-          </div>
-          <div class="flex justify-between py-1 border-b border-slate-100">
-            <span class="text-slate-400">單位特色</span>
-            <span class="font-medium text-slate-800">豪華裝修 • 景觀開揚 • 附送家具</span>
-          </div>
+        <div class="mt-2 bg-sky-50 text-sky-700 text-xs px-3 py-2 rounded-xl flex items-center justify-between border border-sky-100">
+          <span>月供 約 $48,570 | 首期 276 萬</span>
+          <i data-lucide="chevron-right" class="w-4 h-4"></i>
         </div>
       </div>
 
-      <!-- 免責聲明 Footnote -->
+      <div class="grid grid-cols-2 gap-2">
+        <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-md text-sm transition">按揭申請</button>
+        <button class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-md text-sm transition flex items-center justify-center gap-1">
+          <i data-lucide="phone" class="w-4 h-4"></i> 聯絡代理
+        </button>
+      </div>
+
+      <div>
+        <div class="flex items-baseline gap-2 mb-4">
+          <span class="text-sm text-slate-500">實用面積</span>
+          <span class="text-2xl font-bold text-slate-900">578 呎</span>
+          <span class="text-sm font-semibold text-orange-600 ml-auto">售 $23,875/呎</span>
+        </div>
+        <div class="grid grid-cols-4 gap-2 text-center py-4 bg-slate-50 rounded-xl border border-slate-100">
+          <div><p class="text-[11px] text-slate-400">房數</p><p class="font-bold text-slate-800">2房</p></div>
+          <div><p class="text-[11px] text-slate-400">實用率</p><p class="font-bold text-slate-800">-</p></div>
+          <div><p class="text-[11px] text-slate-400">方向</p><p class="font-bold text-slate-800">東南</p></div>
+          <div><p class="text-[11px] text-slate-400">樓齡</p><p class="font-bold text-slate-800">4年</p></div>
+        </div>
+      </div>
+      
       <div class="text-[11px] text-slate-400 border-t border-slate-100 pt-3">
         免責聲明：本頁面 VR 睇樓模型僅供參考，所有資料以現場交訂為準。
       </div>
-
     </section>
-
   </main>
 
   <script>
+    // 全局變數
     let scene, camera, renderer, controls, currentModel;
-    let isFPSMode = false;
-    
-    // 光暗/曝光狀態
-    let currentExposure = 1.0; 
-    
-    // FPS 漫遊與視角變數
-    let cameraYaw = 0;
-    let cameraPitch = 0;
-    let isFlying = false;
-    let targetPos = new THREE.Vector3();
-    let targetLook = new THREE.Vector3();
+    let exposureIndex = 0;
+    const exposures = [1.5, 2.0, 0.8, 1.0]; // 光暗循環數值
+    let isWalkMode = false;
 
-    // 鍵盤狀態
-    const keys = { w: false, a: false, s: false, d: false };
-
-    // 房間虛擬座標 (可自行微調)
-    const roomCoordinates = {
-      livingRoom: { pos: [0, 1.5, 4], lookAt: [0, 1.5, 0] },
-      bedroom:    { pos: [3, 1.5, -2], lookAt: [3, 1.5, -5] },
-      kitchen:    { pos: [-3, 1.5, -1], lookAt: [-6, 1.5, -1] },
-      balcony:    { pos: [0, 1.5, 6], lookAt: [0, 1.5, 10] }
+    // 房間座標設定 (修改這些數值可精準對應你的房屋)
+    const rooms = {
+      livingRoom: { pos: [0, 1.5, 4], target: [0, 1.5, 0] },
+      bedroom:    { pos: [3, 1.5, -2], target: [3, 1.5, -5] },
+      kitchen:    { pos: [-2, 1.5, 1], target: [-5, 1.5, 1] }
     };
 
-    function init3D() {
+    // WASD 漫遊控制參數
+    let moveForward = false;
+    let moveBackward = false;
+    let moveLeft = false;
+    let moveRight = false;
+    const velocity = new THREE.Vector3();
+    const direction = new THREE.Vector3();
+    let prevTime = performance.now();
+
+    function initEngine() {
       const container = document.getElementById('canvas-container');
 
+      // 1. 場景與相機
       scene = new THREE.Scene();
-      scene.background = new THREE.Color(0xf8fafc);
-
-      camera = new THREE.PerspectiveCamera(55, container.clientWidth / container.clientHeight, 0.1, 1000);
-      camera.position.set(0, 2, 6);
-
-      renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      renderer.setSize(container.clientWidth, container.clientHeight);
+      scene.background = new THREE.Color(0xe2e8f0);
       
-      // 光影編碼設定
+      camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+      camera.position.set(0, 1.5, 5);
+
+      // 2. 渲染器設定 (支援高光動態還原)
+      renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(container.clientWidth, container.clientHeight);
       renderer.outputEncoding = THREE.sRGBEncoding;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = currentExposure;
-
+      renderer.toneMappingExposure = exposures[0];
       container.appendChild(renderer.domElement);
 
+      // 3. 滑鼠控制 (OrbitControls)
       controls = new THREE.OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = 0.05;
       controls.minDistance = 0.1;
+      controls.maxDistance = 100;
 
-      // 強力補光避免黑屏
-      const ambientLight = new THREE.AmbientLight(0xffffff, 1.8);
+      // 4. 超強補光系統 (解決黑屏)
+      const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
       scene.add(ambientLight);
-      const hemiLight = new THREE.HemisphereLight(0xffffff, 0x888888, 1.2);
+      
+      const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5);
+      hemiLight.position.set(0, 20, 0);
       scene.add(hemiLight);
 
-      // 事件監聽
-      window.addEventListener('keydown', (e) => { if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true; });
-      window.addEventListener('keyup', (e) => { if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false; });
-      window.addEventListener('resize', onResize);
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      dirLight.position.set(10, 10, 10);
+      scene.add(dirLight);
+
+      window.addEventListener('resize', onWindowResize);
+      setupWASD();
       
+      // 啟動動畫迴圈
       animate();
 
-      const isPreviewEnv = window.location.protocol === 'blob:' || window.location.protocol === 'file:';
-      if (isPreviewEnv) {
-         createVirtualRoom();
+      // 載入模型 (加入防預覽報錯機制)
+      if (window.location.protocol === 'blob:' || window.location.protocol === 'file:') {
+        createFallbackRoom();
       } else {
-         loadGLTF('24_7_2026.glb');
+        loadGLTFModel('24_7_2026.glb');
       }
     }
 
-    function loadGLTF(url) {
+    function loadGLTFModel(url) {
       const loader = new THREE.GLTFLoader();
-      loader.load(url, function (gltf) {
-        if (currentModel) scene.remove(currentModel);
-        currentModel = gltf.scene;
+      loader.load(url, 
+        function (gltf) {
+          if (currentModel) scene.remove(currentModel);
+          currentModel = gltf.scene;
 
-        // 修復黑屏：雙面渲染與材質深度
-        currentModel.traverse((child) => {
-          if (child.isMesh && child.material) {
-            child.material.side = THREE.DoubleSide; 
-            child.material.depthWrite = true;
-          }
-        });
+          // 核心修復：雙面渲染與低金屬度，徹底解決室內黑屏問題
+          currentModel.traverse((child) => {
+            if (child.isMesh && child.material) {
+              if (Array.isArray(child.material)) {
+                  child.material.forEach(mat => {
+                      mat.side = THREE.DoubleSide;
+                      mat.depthWrite = true;
+                      if(mat.metalness !== undefined) mat.metalness = 0.1;
+                  });
+              } else {
+                  child.material.side = THREE.DoubleSide;
+                  child.material.depthWrite = true;
+                  if(child.material.metalness !== undefined) child.material.metalness = 0.1;
+              }
+            }
+          });
 
-        const box = new THREE.Box3().setFromObject(currentModel);
-        const center = box.getCenter(new THREE.Vector3());
-        const size = box.getSize(new THREE.Vector3());
-        
-        currentModel.position.sub(center); 
-        scene.add(currentModel);
+          // 置中模型
+          const box = new THREE.Box3().setFromObject(currentModel);
+          const center = box.getCenter(new THREE.Vector3());
+          currentModel.position.sub(center);
+          scene.add(currentModel);
 
-        resetToCenter();
-        document.getElementById('loading-overlay').classList.add('hidden');
-        
-      }, undefined, function (error) {
-        console.error(error);
-        createVirtualRoom();
+          document.getElementById('loading-overlay').classList.add('opacity-0', 'pointer-events-none');
+          
+          // 模型載入完畢，直接飛進室內客廳！
+          flyToRoom('livingRoom');
+        }, 
+        undefined, 
+        function (error) {
+          console.error('載入失敗:', error);
+          createFallbackRoom(); // 若失敗則顯示測試房間
+        }
+      );
+    }
+
+    function flyToRoom(roomKey) {
+      const r = rooms[roomKey];
+      if(!r) return;
+      camera.position.set(r.pos[0], r.pos[1], r.pos[2]);
+      controls.target.set(r.target[0], r.target[1], r.target[2]);
+      controls.update();
+    }
+
+    function adjustExposure() {
+      exposureIndex = (exposureIndex + 1) % exposures.length;
+      renderer.toneMappingExposure = exposures[exposureIndex];
+    }
+
+    function toggleWalkMode() {
+      isWalkMode = !isWalkMode;
+      const btnWalk = document.getElementById('btn-walk');
+      const dPad = document.getElementById('d-pad');
+      const statusText = document.getElementById('status-text');
+
+      if (isWalkMode) {
+        btnWalk.innerHTML = `<i data-lucide="orbit" class="w-4 h-4"></i><span class="hidden sm:inline">退出漫遊</span>`;
+        btnWalk.classList.replace('text-emerald-400', 'text-blue-400');
+        dPad.classList.remove('hidden');
+        statusText.innerText = "🚶 WASD 漫遊中";
+        resetPan(); // 進入時強制平視
+      } else {
+        btnWalk.innerHTML = `<i data-lucide="footprints" class="w-4 h-4"></i><span class="hidden sm:inline">漫遊 (WASD)</span>`;
+        btnWalk.classList.replace('text-blue-400', 'text-emerald-400');
+        dPad.classList.add('hidden');
+        statusText.innerText = "360° 環繞睇樓";
+      }
+      lucide.createIcons();
+    }
+
+    // D-Pad 微調視角 (Yaw & Pitch)
+    function panCamera(deltaYaw, deltaPitch) {
+      if(!isWalkMode) return;
+      
+      const spherical = new THREE.Spherical().setFromVector3(
+        camera.position.clone().sub(controls.target).negate()
+      );
+      
+      spherical.theta -= deltaYaw; // 左右
+      spherical.phi -= deltaPitch; // 上下
+      
+      // 限制上下看角度，避免翻轉
+      spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
+      
+      const newTarget = new THREE.Vector3().setFromSpherical(spherical).add(camera.position);
+      controls.target.copy(newTarget);
+      controls.update();
+    }
+
+    function resetPan() {
+      // 強制水平平視 (Pitch = 90度/PI_2)
+      const spherical = new THREE.Spherical().setFromVector3(
+        camera.position.clone().sub(controls.target).negate()
+      );
+      spherical.phi = Math.PI / 2;
+      const newTarget = new THREE.Vector3().setFromSpherical(spherical).add(camera.position);
+      controls.target.copy(newTarget);
+      controls.update();
+    }
+
+    function setupWASD() {
+      document.addEventListener('keydown', (event) => {
+        if (!isWalkMode) return;
+        switch (event.code) {
+          case 'ArrowUp': case 'KeyW': moveForward = true; break;
+          case 'ArrowLeft': case 'KeyA': moveLeft = true; break;
+          case 'ArrowDown': case 'KeyS': moveBackward = true; break;
+          case 'ArrowRight': case 'KeyD': moveRight = true; break;
+        }
+      });
+      document.addEventListener('keyup', (event) => {
+        switch (event.code) {
+          case 'ArrowUp': case 'KeyW': moveForward = false; break;
+          case 'ArrowLeft': case 'KeyA': moveLeft = false; break;
+          case 'ArrowDown': case 'KeyS': moveBackward = false; break;
+          case 'ArrowRight': case 'KeyD': moveRight = false; break;
+        }
       });
     }
 
-    function onResize() {
+    function onWindowResize() {
       const container = document.getElementById('canvas-container');
-      if(!container) return;
+      if (!container) return;
       camera.aspect = container.clientWidth / container.clientHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(container.clientWidth, container.clientHeight);
     }
 
+    // 主渲染與移動運算
     function animate() {
       requestAnimationFrame(animate);
+      
+      const time = performance.now();
+      const delta = (time - prevTime) / 1000;
+      
+      if (isWalkMode) {
+        // WASD 物理滑動計算
+        velocity.x -= velocity.x * 10.0 * delta;
+        velocity.z -= velocity.z * 10.0 * delta;
+        
+        direction.z = Number(moveForward) - Number(moveBackward);
+        direction.x = Number(moveRight) - Number(moveLeft);
+        direction.normalize();
 
-      if (isFlying) {
-        camera.position.lerp(targetPos, 0.08);
-        controls.target.lerp(targetLook, 0.08);
-        if (camera.position.distanceTo(targetPos) < 0.05) isFlying = false;
-      } 
-      else if (isFPSMode) {
-        handleWASDMovement();
+        const speed = 4.0;
+        if (moveForward || moveBackward) velocity.z -= direction.z * speed * delta;
+        if (moveLeft || moveRight) velocity.x -= direction.x * speed * delta;
+
+        // 計算攝影機當前朝向的水平分量 (去除 Y 軸傾斜)
+        const forwardVector = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+        forwardVector.y = 0;
+        forwardVector.normalize();
+        
+        const rightVector = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+        rightVector.y = 0;
+        rightVector.normalize();
+
+        // 依據朝向套用移動
+        const moveVec = new THREE.Vector3()
+            .addScaledVector(rightVector, velocity.x * delta)
+            .addScaledVector(forwardVector, velocity.z * delta);
+
+        camera.position.add(moveVec);
+        controls.target.add(moveVec);
       }
-
-      controls.update();
+      
+      prevTime = time;
+      if (controls) controls.update();
       renderer.render(scene, camera);
     }
 
-    function handleWASDMovement() {
-      const speed = 0.08;
-      const moveDelta = new THREE.Vector3(0, 0, 0);
-      const dir = new THREE.Vector3();
-      const sideDir = new THREE.Vector3();
-
-      camera.getWorldDirection(dir);
-      dir.y = 0; 
-      dir.normalize();
-      sideDir.crossVectors(camera.up, dir).normalize();
-
-      if (keys.w) moveDelta.addScaledVector(dir, speed);
-      if (keys.s) moveDelta.addScaledVector(dir, -speed);
-      if (keys.a) moveDelta.addScaledVector(sideDir, speed);
-      if (keys.d) moveDelta.addScaledVector(sideDir, -speed);
-
-      if (moveDelta.lengthSq() > 0) {
-        camera.position.add(moveDelta);
-        controls.target.add(moveDelta);
-      }
-    }
-
-    function updateCameraLookAt() {
-      const dir = new THREE.Vector3(
-        Math.sin(cameraYaw) * Math.cos(cameraPitch),
-        Math.sin(cameraPitch),
-        -Math.cos(cameraYaw) * Math.cos(cameraPitch)
-      );
-      const target = camera.position.clone().add(dir);
-      controls.target.copy(target);
-    }
-
-    // 光暗循環調節 (曝光值: 1.0 -> 1.5 -> 2.0 -> 0.7 -> 1.0)
-    function adjustLight() {
-      if(currentExposure === 1.0) currentExposure = 1.5;
-      else if(currentExposure === 1.5) currentExposure = 2.0;
-      else if(currentExposure === 2.0) currentExposure = 0.7;
-      else currentExposure = 1.0;
+    // 測試環境防錯替代方案 (預覽視窗用)
+    function createFallbackRoom() {
+      const boxGeo = new THREE.BoxGeometry(10, 3, 10);
+      const boxMat = new THREE.MeshLambertMaterial({ color: 0xcccccc, side: THREE.BackSide });
+      const room = new THREE.Mesh(boxGeo, boxMat);
+      room.position.y = 1.5;
+      scene.add(room);
       
-      renderer.toneMappingExposure = currentExposure;
-      // 顯示提示
-      const status = document.getElementById('status-text');
-      status.innerText = `亮度調整為: ${currentExposure}x`;
-      setTimeout(() => { 
-        if(isFPSMode) status.innerText = "🚶 第一人稱漫遊 (WASD)";
-        else status.innerText = "VR 360° 環繞檢視";
-      }, 2000);
-    }
+      const grid = new THREE.GridHelper(10, 10, 0x888888, 0x444444);
+      scene.add(grid);
 
-    function adjustCameraAngle(deltaYaw, deltaPitch) {
-      if (!isFPSMode) toggleFPSMode();
-      cameraYaw += deltaYaw;
-      cameraPitch += deltaPitch;
-      cameraPitch = Math.max(-Math.PI / 2.1, Math.min(Math.PI / 2.1, cameraPitch));
-      updateCameraLookAt();
-    }
-
-    function resetPitch() {
-      cameraPitch = 0;
-      updateCameraLookAt();
-    }
-
-    function flyToRoom(roomName) {
-      const room = roomCoordinates[roomName];
-      if (!room) return;
-      targetPos.set(room.pos[0], room.pos[1], room.pos[2]);
-      targetLook.set(room.lookAt[0], room.lookAt[1], room.lookAt[2]);
-      
-      cameraYaw = Math.atan2(room.pos[0] - room.lookAt[0], room.pos[2] - room.lookAt[2]);
-      cameraPitch = 0;
-      isFlying = true;
-      if (!isFPSMode) toggleFPSMode();
-    }
-
-    function toggleFPSMode() {
-      isFPSMode = !isFPSMode;
-      const btn = document.getElementById('btn-mode');
-      const status = document.getElementById('status-text');
-      const dPad = document.getElementById('d-pad');
-      const container = document.getElementById('canvas-container');
-      
-      if (isFPSMode) {
-        btn.innerHTML = `<i data-lucide="orbit" class="w-4 h-4 text-blue-400"></i><span>切換環繞模式</span>`;
-        status.innerText = "🚶 第一人稱漫遊 (WASD)";
-        dPad.classList.remove('hidden');
-        dPad.classList.add('flex');
-        container.style.cursor = 'crosshair';
-        
-        const target = controls.target.clone().sub(camera.position);
-        cameraYaw = Math.atan2(target.x, -target.z);
-        cameraPitch = Math.asin(target.y / target.length());
-      } else {
-        btn.innerHTML = `<i data-lucide="footprints" class="w-4 h-4 text-emerald-400"></i><span>第一人稱漫遊 (WASD)</span>`;
-        status.innerText = "VR 360° 環繞檢視";
-        dPad.classList.add('hidden');
-        dPad.classList.remove('flex');
-        container.style.cursor = 'grab';
-      }
-      lucide.createIcons();
-    }
-
-    function resetToCenter() {
-      if (!currentModel) return;
-      if (isFPSMode) toggleFPSMode();
-      const box = new THREE.Box3().setFromObject(currentModel);
-      const size = box.getSize(new THREE.Vector3());
-      const maxDim = Math.max(size.x, size.y, size.z);
-      camera.position.set(0, maxDim * 0.5, maxDim * 1.5);
-      controls.target.set(0, 0, 0);
-      controls.update();
-    }
-
-    function createVirtualRoom() {
-      if (currentModel) scene.remove(currentModel);
-      currentModel = new THREE.Group();
-      
-      const floor = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.8 }));
-      floor.rotation.x = -Math.PI / 2;
-      currentModel.add(floor);
-      
-      const materials = [
-          new THREE.MeshStandardMaterial({ color: 0xef4444 }), // 客廳
-          new THREE.MeshStandardMaterial({ color: 0x22c55e }), // 睡房
-          new THREE.MeshStandardMaterial({ color: 0x3b82f6 }), // 廚房
-          new THREE.MeshStandardMaterial({ color: 0xeab308 })  // 露台
-      ];
-      const positions = [[0,1.5,4], [3,1.5,-2], [-3,1.5,-1], [0,1.5,6]];
-      
-      for(let i=0; i<4; i++){
-          const box = new THREE.Mesh(new THREE.BoxGeometry(1, 3, 1), materials[i]);
-          box.position.set(positions[i][0], positions[i][1], positions[i][2]);
-          currentModel.add(box);
-      }
-      
-      scene.add(currentModel);
-      document.getElementById('loading-overlay').classList.add('hidden');
-      resetToCenter();
+      document.getElementById('loading-overlay').classList.add('opacity-0', 'pointer-events-none');
+      flyToRoom('livingRoom');
     }
 
     window.onload = () => {
-      init3D();
+      initEngine();
       lucide.createIcons();
     };
   </script>
