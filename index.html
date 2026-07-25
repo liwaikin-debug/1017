@@ -49,7 +49,7 @@
         <!-- 左上角狀態 -->
         <div class="absolute top-4 left-4 z-10 bg-slate-900/70 backdrop-blur text-white text-xs px-3 py-1.5 rounded-full border border-white/20 flex items-center gap-1.5 shadow-md">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span id="status-badge">第一人稱漫遊 (支援滑動 + WASD)</span>
+          <span id="status-badge">全視角 VR 360° 漫遊</span>
         </div>
 
         <!-- ================= 底部中央：房間一鍵跳躍 ================= -->
@@ -68,22 +68,26 @@
         <!-- ================= 右下角控制 ================= -->
         <div id="normal-controls" class="absolute bottom-4 right-4 z-10 flex flex-col items-end gap-2">
           
-          <!-- D-Pad 十字鍵 (微調專用) -->
+          <!-- D-Pad 十字鍵 -->
           <div id="d-pad" class="grid grid-cols-3 gap-1.5 p-2 glass-btn rounded-2xl mb-1 shadow-2xl">
+            <!-- 修正：往上箭頭 = 抬頭 (dx=0, dy=-0.02) -->
             <div class="col-start-2">
-              <button onpointerdown="startPan(0, 0.02)" onpointerup="stopPan()" onpointerleave="stopPan()" class="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center text-white active:bg-blue-500 transition"><i data-lucide="chevron-up"></i></button>
+              <button onpointerdown="startPan(0, -0.02)" onpointerup="stopPan()" onpointerleave="stopPan()" class="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center text-white active:bg-blue-500 transition"><i data-lucide="chevron-up"></i></button>
             </div>
+            <!-- 修正：往左箭頭 = 向左看 (dx=-0.02, dy=0) -->
             <div class="col-start-1 row-start-2">
-              <button onpointerdown="startPan(0.02, 0)" onpointerup="stopPan()" onpointerleave="stopPan()" class="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center text-white active:bg-blue-500 transition"><i data-lucide="chevron-left"></i></button>
+              <button onpointerdown="startPan(-0.02, 0)" onpointerup="stopPan()" onpointerleave="stopPan()" class="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center text-white active:bg-blue-500 transition"><i data-lucide="chevron-left"></i></button>
             </div>
             <div class="col-start-2 row-start-2 flex items-center justify-center">
               <button onclick="resetPan()" class="w-12 h-12 bg-blue-600/80 rounded-xl text-[11px] font-bold text-white shadow-inner active:scale-90 transition">平視</button>
             </div>
+            <!-- 修正：往右箭頭 = 向右看 (dx=0.02, dy=0) -->
             <div class="col-start-3 row-start-2">
-              <button onpointerdown="startPan(-0.02, 0)" onpointerup="stopPan()" onpointerleave="stopPan()" class="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center text-white active:bg-blue-500 transition"><i data-lucide="chevron-right"></i></button>
+              <button onpointerdown="startPan(0.02, 0)" onpointerup="stopPan()" onpointerleave="stopPan()" class="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center text-white active:bg-blue-500 transition"><i data-lucide="chevron-right"></i></button>
             </div>
+            <!-- 修正：往下箭頭 = 低頭 (dx=0, dy=0.02) -->
             <div class="col-start-2 row-start-3">
-              <button onpointerdown="startPan(0, -0.02)" onpointerup="stopPan()" onpointerleave="stopPan()" class="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center text-white active:bg-blue-500 transition"><i data-lucide="chevron-down"></i></button>
+              <button onpointerdown="startPan(0, 0.02)" onpointerup="stopPan()" onpointerleave="stopPan()" class="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center text-white active:bg-blue-500 transition"><i data-lucide="chevron-down"></i></button>
             </div>
           </div>
 
@@ -166,18 +170,18 @@
       renderer.toneMappingExposure = currentExposure;
       container.appendChild(renderer.domElement);
 
+      // 解除所有限制，完全自由 360 度
       controls = new THREE.OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = 0.05; 
       
-      // ✅ 解鎖旋轉，恢復 VR 效果！
       controls.enableRotate = true; 
-      controls.enableZoom = false; // 關閉滾輪縮放避免穿牆
+      controls.enableZoom = true;  // ✅ 開啟滾輪縮放！
       controls.enablePan = false;  // 關閉右鍵平移避免跑掉
 
-      // 🛡️ 長輩防暈眩安全鎖：限制抬頭和低頭的角度，絕對不會翻轉！
-      controls.minPolarAngle = Math.PI / 2.5; // 最高只能看一點天花板
-      controls.maxPolarAngle = Math.PI / 1.5; // 最低只能看一點地板
+      // 移除上下視角限制，恢復真正的 VR 體驗
+      controls.minPolarAngle = 0; 
+      controls.maxPolarAngle = Math.PI; 
 
       ambientLight = new THREE.AmbientLight(0xffffff, 2.0);
       scene.add(ambientLight);
@@ -288,9 +292,6 @@
         
         spherical.theta -= dx; // 左右
         spherical.phi -= dy;   // 上下
-        
-        // 限制防暈眩角度
-        spherical.phi = Math.max(Math.PI / 2.5, Math.min(Math.PI / 1.5, spherical.phi));
         
         dir.setFromSpherical(spherical);
         controls.target.copy(camera.position).add(dir);
