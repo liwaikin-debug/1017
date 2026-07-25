@@ -17,7 +17,6 @@
   <style>
     body { background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", sans-serif; touch-action: none; overflow: hidden; }
     .glass-btn { background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); }
-    /* 自訂滾動條 */
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
   </style>
@@ -46,8 +45,9 @@
         <button class="bg-orange-600 text-white px-4 py-2 rounded-lg shadow-sm flex items-center gap-1.5 shrink-0">
           <i data-lucide="box" class="w-4 h-4"></i> VR 360° 回憶空間
         </button>
-        <button class="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 px-4 py-2 rounded-lg shrink-0">
-          家庭相片
+        <!-- 移除家庭相片，加入地圖按鈕 -->
+        <button onclick="toggleMinimap()" class="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 px-4 py-2 rounded-lg shrink-0 flex items-center gap-1.5 shadow-sm transition">
+          <i data-lucide="map" class="w-4 h-4 text-blue-500"></i> 開啟單位小地圖
         </button>
       </div>
 
@@ -69,15 +69,31 @@
           <span id="status-text">360° 環繞檢視模式</span>
         </div>
 
-        <!-- D-Pad 十字微調盤 (僅在漫遊模式顯示) -->
-        <div id="d-pad" class="hidden absolute right-4 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-1.5 glass-btn p-2 rounded-2xl">
-          <button onclick="panCamera(0, 0.05)" class="p-3 rounded-xl hover:bg-white/20 text-white active:scale-90 transition" title="抬頭"><i data-lucide="chevron-up" class="w-5 h-5"></i></button>
-          <div class="flex gap-1.5">
-            <button onclick="panCamera(0.05, 0)" class="p-3 rounded-xl hover:bg-white/20 text-white active:scale-90 transition" title="向左看"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
-            <button onclick="resetPan()" class="p-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-[10px] font-bold shadow-lg w-11 h-11 flex items-center justify-center">平視</button>
-            <button onclick="panCamera(-0.05, 0)" class="p-3 rounded-xl hover:bg-white/20 text-white active:scale-90 transition" title="向右看"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
+        <!-- 小地圖導航面板 (預設隱藏) -->
+        <div id="minimap-modal" class="hidden absolute top-14 left-4 z-30 bg-white/95 backdrop-blur-md p-4 rounded-xl shadow-2xl border border-slate-200 w-64">
+          <div class="flex justify-between items-center mb-3">
+            <span class="font-bold text-slate-800 text-sm flex items-center gap-1.5"><i data-lucide="map-pin" class="w-4 h-4 text-red-500"></i> 一鍵瞬間傳送</span>
+            <button onclick="toggleMinimap()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-4 h-4"></i></button>
           </div>
-          <button onclick="panCamera(0, -0.05)" class="p-3 rounded-xl hover:bg-white/20 text-white active:scale-90 transition" title="低頭"><i data-lucide="chevron-down" class="w-5 h-5"></i></button>
+          <div class="grid grid-cols-2 gap-2">
+            <!-- 設定大概的坐標 (X, Y, Z)，你可以之後微調 -->
+            <button onclick="teleportTo(0, 1.2, 2.5)" class="bg-slate-100 hover:bg-orange-100 text-slate-700 hover:text-orange-700 py-3 rounded-lg text-sm font-medium transition border border-slate-200">客飯廳</button>
+            <button onclick="teleportTo(3, 1.2, -1)" class="bg-slate-100 hover:bg-orange-100 text-slate-700 hover:text-orange-700 py-3 rounded-lg text-sm font-medium transition border border-slate-200">溫暖睡房</button>
+            <button onclick="teleportTo(-2, 1.2, -2)" class="bg-slate-100 hover:bg-orange-100 text-slate-700 hover:text-orange-700 py-3 rounded-lg text-sm font-medium transition border border-slate-200">廚房</button>
+            <button onclick="teleportTo(0, 1.2, -3)" class="bg-slate-100 hover:bg-orange-100 text-slate-700 hover:text-orange-700 py-3 rounded-lg text-sm font-medium transition border border-slate-200">洗手間</button>
+          </div>
+          <p class="text-[10px] text-slate-400 text-center mt-3">點擊上方按鈕，即刻飛去指定房間</p>
+        </div>
+
+        <!-- D-Pad 十字微調盤 (僅在漫遊模式顯示，已調慢速度) -->
+        <div id="d-pad" class="hidden absolute right-4 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-1.5 glass-btn p-2 rounded-2xl shadow-xl border border-white/10">
+          <button onclick="panCamera(0, 0.02)" class="p-3 rounded-xl hover:bg-white/20 text-white active:scale-90 transition" title="抬頭"><i data-lucide="chevron-up" class="w-6 h-6"></i></button>
+          <div class="flex gap-1.5">
+            <button onclick="panCamera(0.02, 0)" class="p-3 rounded-xl hover:bg-white/20 text-white active:scale-90 transition" title="向左看"><i data-lucide="chevron-left" class="w-6 h-6"></i></button>
+            <button onclick="resetPan()" class="p-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-[11px] font-bold shadow-lg w-12 h-12 flex items-center justify-center">平視</button>
+            <button onclick="panCamera(-0.02, 0)" class="p-3 rounded-xl hover:bg-white/20 text-white active:scale-90 transition" title="向右看"><i data-lucide="chevron-right" class="w-6 h-6"></i></button>
+          </div>
+          <button onclick="panCamera(0, -0.02)" class="p-3 rounded-xl hover:bg-white/20 text-white active:scale-90 transition" title="低頭"><i data-lucide="chevron-down" class="w-6 h-6"></i></button>
         </div>
 
         <!-- 畫面底部控制鈕 (漫遊 / 光暗 / 重置) -->
@@ -175,7 +191,7 @@
       
       camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
       
-      // 2. 渲染器設定 (開啟高動態真實色彩)
+      // 2. 渲染器設定
       renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
       renderer.setPixelRatio(window.devicePixelRatio);
       renderer.setSize(container.clientWidth, container.clientHeight);
@@ -184,30 +200,26 @@
       renderer.toneMappingExposure = exposures[0];
       container.appendChild(renderer.domElement);
 
-      // 3. 滑鼠控制 (OrbitControls)
+      // 3. 滑鼠控制 (降速防頭暈)
       controls = new THREE.OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = 0.05;
+      controls.rotateSpeed = 0.4; // 【長輩防頭暈設定】大幅降低滑鼠/手指旋轉速度
       controls.minDistance = 0.1;
       controls.maxDistance = 100;
 
-      // 4. 超強補光系統 (解決黑屏)
+      // 4. 超強補光系統
       const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
       scene.add(ambientLight);
       const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5);
       hemiLight.position.set(0, 20, 0);
       scene.add(hemiLight);
-      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      dirLight.position.set(10, 10, 10);
-      scene.add(dirLight);
 
       window.addEventListener('resize', onWindowResize);
       setupWASD();
       
-      // 啟動動畫迴圈
       animate();
 
-      // 載入模型或生成測試房間
       if (window.location.protocol === 'blob:' || window.location.protocol === 'file:') {
         createFallbackRoom();
       } else {
@@ -223,7 +235,6 @@
           if (currentModel) scene.remove(currentModel);
           currentModel = gltf.scene;
 
-          // 核心修復：強制雙面渲染與低金屬度，徹底解決室內外黑屏
           currentModel.traverse((child) => {
             if (child.isMesh && child.material) {
               if (Array.isArray(child.material)) {
@@ -240,15 +251,12 @@
             }
           });
 
-          // 置中模型
           const box = new THREE.Box3().setFromObject(currentModel);
           const center = box.getCenter(new THREE.Vector3());
           currentModel.position.sub(center);
           scene.add(currentModel);
 
           document.getElementById('loading-overlay').classList.add('opacity-0', 'pointer-events-none');
-          
-          // 載入完畢，直接進入正中心
           resetCamera();
         }, 
         undefined, 
@@ -259,7 +267,24 @@
       );
     }
 
-    // 切換漫遊模式與 360 環繞模式
+    // 小地圖開關
+    function toggleMinimap() {
+      document.getElementById('minimap-modal').classList.toggle('hidden');
+    }
+
+    // 小地圖：瞬間傳送至房間
+    function teleportTo(x, y, z) {
+      camera.position.set(x, y, z);
+      // 目標點設在相機正前方一點點，確保平視
+      controls.target.set(x, y, z - 0.1);
+      controls.update();
+      toggleMinimap();
+      
+      // 如果不在漫遊模式，切換進去才能用方向盤
+      if (!isWalkMode) toggleWalkMode();
+    }
+
+    // 切換漫遊模式
     function toggleWalkMode() {
       isWalkMode = !isWalkMode;
       const btnWalk = document.getElementById('btn-walk');
@@ -281,48 +306,54 @@
       lucide.createIcons();
     }
 
-    // 調整光暗
     function adjustExposure() {
       exposureIndex = (exposureIndex + 1) % exposures.length;
       renderer.toneMappingExposure = exposures[exposureIndex];
     }
 
-    // 視角重置 (回到房屋中心點)
     function resetCamera() {
       camera.position.set(0, 1.2, 3.5);
       controls.target.set(0, 1.2, 0);
       controls.update();
     }
 
-    // 十字盤 D-Pad 視角微調 (Yaw & Pitch)
+    // 修復版：D-Pad 視角微調 (防反轉)
     function panCamera(deltaYaw, deltaPitch) {
       if(!isWalkMode) return;
       
       const spherical = new THREE.Spherical().setFromVector3(
-        camera.position.clone().sub(controls.target).negate()
+        controls.target.clone().sub(camera.position)
       );
       
       spherical.theta -= deltaYaw; // 左右
       spherical.phi -= deltaPitch; // 上下
-      spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi)); // 限制上下看角度
       
-      const newTarget = new THREE.Vector3().setFromSpherical(spherical).add(camera.position);
+      // 嚴格限制上下角度，防止畫面反轉翻跟斗
+      spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi)); 
+      
+      const newTarget = camera.position.clone().add(new THREE.Vector3().setFromSpherical(spherical));
       controls.target.copy(newTarget);
       controls.update();
     }
 
-    // 十字盤中間按鈕：恢復平視
+    // 修復版：一鍵平視 (真正水平)
     function resetPan() {
-      const spherical = new THREE.Spherical().setFromVector3(
-        camera.position.clone().sub(controls.target).negate()
-      );
-      spherical.phi = Math.PI / 2; // 強制水平 90 度
-      const newTarget = new THREE.Vector3().setFromSpherical(spherical).add(camera.position);
+      if(!isWalkMode) return;
+      
+      // 抓取相機現在的朝向
+      const dir = new THREE.Vector3();
+      camera.getWorldDirection(dir);
+      
+      // 強制 Y 軸為 0 (不抬頭也不低頭)
+      dir.y = 0;
+      dir.normalize();
+      
+      // 在相機正前方設定一個目標點
+      const newTarget = camera.position.clone().add(dir);
       controls.target.copy(newTarget);
       controls.update();
     }
 
-    // WASD 鍵盤控制綁定
     function setupWASD() {
       document.addEventListener('keydown', (event) => {
         if (!isWalkMode) return;
@@ -351,7 +382,6 @@
       renderer.setSize(container.clientWidth, container.clientHeight);
     }
 
-    // 核心動畫與物理移動運算
     function animate() {
       requestAnimationFrame(animate);
       
@@ -359,7 +389,6 @@
       const delta = (time - prevTime) / 1000;
       
       if (isWalkMode) {
-        // FPS 物理滑動計算
         velocity.x -= velocity.x * 10.0 * delta;
         velocity.z -= velocity.z * 10.0 * delta;
         
@@ -367,12 +396,11 @@
         direction.x = Number(moveRight) - Number(moveLeft);
         direction.normalize();
 
-        // 減慢走路速度，適合老人家慢慢逛
-        const speed = 1.5;
+        // 【長輩防頭暈設定】減慢走路速度 
+        const speed = 1.0; 
         if (moveForward || moveBackward) velocity.z -= direction.z * speed * delta;
         if (moveLeft || moveRight) velocity.x -= direction.x * speed * delta;
 
-        // 計算攝影機當前朝向的水平分量 (確保移動時不會飛天遁地)
         const forwardVector = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
         forwardVector.y = 0;
         forwardVector.normalize();
@@ -394,7 +422,6 @@
       renderer.render(scene, camera);
     }
 
-    // 預覽環境防錯 (生出一個虛擬空間讓你直接測試功能)
     function createFallbackRoom() {
       const boxGeo = new THREE.BoxGeometry(10, 3, 10);
       const boxMat = new THREE.MeshLambertMaterial({ color: 0xcccccc, side: THREE.BackSide });
@@ -404,15 +431,6 @@
       
       const grid = new THREE.GridHelper(10, 10, 0x888888, 0x444444);
       scene.add(grid);
-
-      // 加幾根彩色柱子當參照物
-      const colors = [0xff9999, 0x99ff99, 0x9999ff, 0xffff99];
-      const positions = [[-3, 0, -3], [3, 0, -3], [-3, 0, 3], [3, 0, 3]];
-      for(let i=0; i<4; i++) {
-          const col = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 3), new THREE.MeshLambertMaterial({color: colors[i]}));
-          col.position.set(positions[i][0], 1.5, positions[i][2]);
-          scene.add(col);
-      }
 
       document.getElementById('loading-overlay').classList.add('opacity-0', 'pointer-events-none');
       resetCamera();
