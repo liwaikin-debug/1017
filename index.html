@@ -367,7 +367,8 @@
         direction.x = Number(moveRight) - Number(moveLeft);
         direction.normalize();
 
-        const speed = 4.0;
+        // 減慢走路速度，適合老人家慢慢逛
+        const speed = 1.5;
         if (moveForward || moveBackward) velocity.z -= direction.z * speed * delta;
         if (moveLeft || moveRight) velocity.x -= direction.x * speed * delta;
 
