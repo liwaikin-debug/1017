@@ -3,20 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>3D 模型 360度互動觀看器</title>
+  <title>3D 房屋全亮與漫遊觀看器</title>
   
-  <!-- Tailwind CSS (UI 樣式) -->
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- Three.js 3D 渲染引擎 -->
+  <!-- Three.js & Loaders -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 
-  <!-- Google Model Viewer (支援 iPhone 原生 AR 實境投影) -->
-  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
-
-  <!-- Lucide 圖示庫 -->
+  <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
@@ -25,7 +22,7 @@
       overflow: hidden;
       width: 100%;
       height: 100%;
-      background-color: #0f172a;
+      background-color: #f0f0f2;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
@@ -38,186 +35,198 @@
       z-index: 1;
     }
 
+    /* 玻璃擬態樣式 - Polycam 簡約風格 */
     .glass-panel {
-      background: rgba(15, 23, 42, 0.75);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
     }
 
-    ::-webkit-scrollbar {
-      width: 4px;
+    /* 虛擬搖桿 (Joystick) 樣式 */
+    .joystick-zone {
+      position: absolute;
+      bottom: 40px;
+      left: 30px;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.15);
+      backdrop-filter: blur(8px);
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      z-index: 30;
+      touch-action: none;
     }
-    ::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.2);
-      border-radius: 4px;
+
+    .joystick-knob {
+      position: absolute;
+      top: 35px;
+      left: 35px;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      pointer-events: none;
+      transition: transform 0.05s ease-out;
     }
   </style>
 </head>
-<body class="text-slate-100 select-none">
+<body class="text-slate-800 select-none">
 
-  <!-- 3D Canvas 容器 -->
+  <!-- 3D 渲染區域 -->
   <div id="canvas-container"></div>
 
-  <!-- 隱藏的 Google Model Viewer (專供 iPhone AR 實境喚醒) -->
-  <model-viewer id="mv-ar" style="display:none;" src="24_7_2026.glb" ar camera-controls touch-action="pan-y"></model-viewer>
-
-  <!-- 頂部列 -->
+  <!-- 頂部列 Header -->
   <header class="absolute top-0 left-0 right-0 z-20 p-4 flex items-center justify-between pointer-events-none">
-    <div class="glass-panel px-4 py-2.5 rounded-2xl flex items-center gap-3 pointer-events-auto shadow-xl">
-      <div class="w-8 h-8 rounded-xl bg-blue-600/30 text-blue-400 flex items-center justify-center font-bold">
-        <i data-lucide="box" class="w-5 h-5"></i>
+    <div class="glass-panel px-4 py-2.5 rounded-2xl flex items-center gap-3 pointer-events-auto">
+      <div class="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold">
+        <i data-lucide="box" class="w-4 h-4"></i>
       </div>
       <div>
-        <h1 id="file-title" class="text-sm font-semibold text-white tracking-wide truncate max-w-[160px] sm:max-w-[260px]">
+        <h1 id="file-title" class="text-xs font-bold text-slate-900 tracking-wide truncate max-w-[150px]">
           24_7_2026.glb
         </h1>
-        <p id="file-subtext" class="text-[11px] text-slate-400">3D 模型網頁檢視器</p>
+        <p id="mode-badge" class="text-[10px] font-medium text-slate-500">環繞檢視模式</p>
       </div>
     </div>
 
     <div class="flex items-center gap-2 pointer-events-auto">
-      <!-- 換檔按鈕 -->
-      <label class="glass-panel hover:bg-slate-800/80 active:scale-95 transition text-xs font-medium px-3.5 py-2.5 rounded-xl cursor-pointer flex items-center gap-2 shadow-lg text-blue-400 border-blue-500/30">
+      <label class="glass-panel hover:bg-white active:scale-95 transition text-xs font-semibold px-3 py-2 rounded-xl cursor-pointer flex items-center gap-1.5 text-slate-700">
         <i data-lucide="folder-open" class="w-4 h-4"></i>
-        <span class="hidden sm:inline">開啟其他模型</span>
+        <span class="hidden sm:inline">換檔案</span>
         <input type="file" id="file-input" accept=".glb,.gltf" class="hidden">
       </label>
 
-      <!-- iPhone AR 實境觀看按鈕 -->
-      <button id="btn-ar" onclick="launchAR()" class="glass-panel hover:bg-slate-800/80 active:scale-95 transition text-xs font-medium px-3.5 py-2.5 rounded-xl flex items-center gap-2 text-emerald-400 border-emerald-500/30 shadow-lg">
-        <i data-lucide="scan" class="w-4 h-4"></i>
-        <span class="hidden sm:inline">AR 實境</span>
+      <button onclick="resetCamera()" class="glass-panel hover:bg-white active:scale-95 transition p-2 rounded-xl text-slate-700">
+        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
       </button>
 
-      <!-- 截圖按鈕 -->
-      <button onclick="takeScreenshot()" class="glass-panel hover:bg-slate-800/80 active:scale-95 transition p-2.5 rounded-xl text-slate-300 shadow-lg">
-        <i data-lucide="camera" class="w-4 h-4"></i>
+      <button onclick="togglePanel('settings-modal')" class="glass-panel hover:bg-white active:scale-95 transition p-2 rounded-xl text-slate-700">
+        <i data-lucide="sliders" class="w-4 h-4"></i>
       </button>
     </div>
   </header>
 
   <!-- 載入中指示條 -->
-  <div id="loading-bar-container" class="absolute top-20 left-1/2 -translate-x-1/2 z-20 glass-panel px-6 py-3 rounded-full flex items-center gap-3 shadow-xl">
-    <div class="w-4 h-4 rounded-full border-2 border-blue-400 border-t-transparent animate-spin"></div>
-    <span id="loading-text" class="text-xs font-medium text-slate-200">正在載入 24_7_2026.glb...</span>
+  <div id="loading-bar-container" class="absolute top-20 left-1/2 -translate-x-1/2 z-20 glass-panel px-5 py-2.5 rounded-full flex items-center gap-3 shadow-xl">
+    <div class="w-4 h-4 rounded-full border-2 border-slate-900 border-t-transparent animate-spin"></div>
+    <span id="loading-text" class="text-xs font-bold text-slate-800">正在高亮載入模型...</span>
   </div>
 
-  <!-- 底部右側快選功能欄 -->
-  <div id="controls-panel" class="absolute bottom-6 right-4 z-20 flex flex-col gap-2">
-    <button onclick="resetCamera()" class="glass-panel p-3 rounded-2xl hover:bg-slate-800 text-slate-200 active:scale-90 transition shadow-lg" title="重置視角">
-      <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
-    </button>
-    <button id="btn-auto-rotate" onclick="toggleAutoRotate()" class="glass-panel p-3 rounded-2xl hover:bg-slate-800 text-slate-300 active:scale-90 transition shadow-lg" title="自動旋轉">
-      <i data-lucide="orbit" class="w-5 h-5"></i>
-    </button>
-    <button id="btn-wireframe" onclick="toggleWireframe()" class="glass-panel p-3 rounded-2xl hover:bg-slate-800 text-slate-300 active:scale-90 transition shadow-lg" title="網格網線">
-      <i data-lucide="grid-3x3" class="w-5 h-5"></i>
-    </button>
-    <button onclick="togglePanel('settings-modal')" class="glass-panel p-3 rounded-2xl hover:bg-slate-800 text-blue-400 active:scale-90 transition shadow-lg" title="環境設定">
-      <i data-lucide="sliders" class="w-5 h-5"></i>
+  <!-- 左下角：Polycam 風格【虛擬導覽 / 第一人稱模式切換】按鈕 -->
+  <div class="absolute bottom-6 left-6 z-20 pointer-events-auto">
+    <button id="btn-toggle-walk" onclick="toggleWalkMode()" class="glass-panel hover:bg-white active:scale-95 transition px-4 py-3 rounded-2xl flex items-center gap-2 text-xs font-bold text-slate-900 shadow-lg border-2 border-slate-900/10">
+      <i data-lucide="footprints" class="w-4 h-4 text-blue-600"></i>
+      <span id="walk-btn-text">虛擬導覽（第一人稱漫遊）</span>
     </button>
   </div>
 
-  <!-- 底部左側：3D 面數頂點數據 -->
-  <div id="hud-info" class="absolute bottom-6 left-4 z-20 glass-panel px-4 py-2.5 rounded-2xl flex items-center gap-4 text-xs text-slate-300">
-    <div class="flex items-center gap-1.5">
-      <i data-lucide="triangle" class="w-3.5 h-3.5 text-blue-400"></i>
-      <span>面數: <strong id="info-faces" class="text-white">0</strong></span>
-    </div>
-    <div class="w-px h-3 bg-slate-700"></div>
-    <div class="flex items-center gap-1.5">
-      <i data-lucide="dot" class="w-3.5 h-3.5 text-emerald-400"></i>
-      <span>頂點: <strong id="info-vertices" class="text-white">0</strong></span>
-    </div>
+  <!-- 右下角：高低升降按鈕（第一人稱漫遊時出現） -->
+  <div id="height-controls" class="hidden absolute bottom-6 right-6 z-20 flex flex-col gap-2 pointer-events-auto">
+    <button onclick="changeCameraHeight(0.3)" class="glass-panel p-3 rounded-2xl hover:bg-white active:scale-90 text-slate-800 shadow-md">
+      <i data-lucide="arrow-up" class="w-5 h-5"></i>
+    </button>
+    <button onclick="changeCameraHeight(-0.3)" class="glass-panel p-3 rounded-2xl hover:bg-white active:scale-90 text-slate-800 shadow-md">
+      <i data-lucide="arrow-down" class="w-5 h-5"></i>
+    </button>
+  </div>
+
+  <!-- 手機端虛擬搖桿 (Joystick) -->
+  <div id="joystick-zone" class="joystick-zone hidden">
+    <div id="joystick-knob" class="joystick-knob"></div>
   </div>
 
   <!-- 設定控制彈窗 -->
-  <div id="settings-modal" class="hidden absolute inset-0 z-40 bg-slate-950/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="w-full sm:max-w-md glass-panel rounded-t-3xl sm:rounded-3xl p-6 border border-slate-700/60 shadow-2xl space-y-5">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-        <h3 class="font-bold text-slate-100 flex items-center gap-2">
-          <i data-lucide="settings" class="w-4 h-4 text-blue-400"></i>
-          視覺調整
+  <div id="settings-modal" class="hidden absolute inset-0 z-40 bg-slate-900/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="w-full sm:max-w-md glass-panel rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+        <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+          <i data-lucide="sun" class="w-4 h-4 text-amber-500"></i>
+          模型亮度與環境設定
         </h3>
-        <button onclick="togglePanel('settings-modal')" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
+        <button onclick="togglePanel('settings-modal')" class="p-1 rounded-lg text-slate-400 hover:text-slate-800">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
 
-      <!-- 背景切換 -->
+      <!-- 背景主題 -->
       <div>
-        <label class="text-xs text-slate-400 font-medium mb-2 block">背景主題</label>
+        <label class="text-xs text-slate-500 font-semibold mb-2 block">背景畫布顏色</label>
         <div class="grid grid-cols-3 gap-2">
-          <button onclick="setBackground('dark')" class="py-2 text-xs rounded-xl bg-slate-900 text-slate-300 border border-slate-700">深色</button>
-          <button onclick="setBackground('light')" class="py-2 text-xs rounded-xl bg-slate-200 text-slate-900 border border-slate-300">純白</button>
-          <button onclick="setBackground('gradient')" class="py-2 text-xs rounded-xl bg-gradient-to-b from-slate-800 to-blue-950 text-slate-200 border border-slate-700">工作室</button>
+          <button onclick="setBackground('#f0f0f2')" class="py-2 text-xs font-medium rounded-xl bg-slate-200 text-slate-800 border border-slate-300">Polycam 灰白</button>
+          <button onclick="setBackground('#ffffff')" class="py-2 text-xs font-medium rounded-xl bg-white text-slate-800 border border-slate-300">純潔白</button>
+          <button onclick="setBackground('#0f172a')" class="py-2 text-xs font-medium rounded-xl bg-slate-900 text-white">質感深藍</button>
         </div>
       </div>
 
-      <!-- 燈光亮度 -->
+      <!-- 環境補光亮度 -->
       <div>
-        <div class="flex justify-between text-xs mb-1">
-          <span class="text-slate-400">燈光強度</span>
-          <span id="light-val" class="text-blue-400">1.2</span>
+        <div class="flex justify-between text-xs font-medium mb-1">
+          <span class="text-slate-600">環境無死角強光</span>
+          <span id="light-val" class="text-blue-600 font-bold">2.5</span>
         </div>
-        <input type="range" min="0.2" max="3" step="0.1" value="1.2" oninput="updateLightIntensity(this.value)" class="w-full accent-blue-500 bg-slate-800 rounded-lg">
+        <input type="range" min="0.5" max="5.0" step="0.1" value="2.5" oninput="updateLightIntensity(this.value)" class="w-full accent-blue-600 bg-slate-200 rounded-lg">
       </div>
 
-      <!-- 網格與座標軸 -->
-      <div class="flex items-center justify-between pt-2">
-        <span class="text-xs text-slate-300">顯示地面網格</span>
-        <input type="checkbox" checked onchange="toggleGrid(this.checked)" class="w-4 h-4 accent-blue-600 rounded">
-      </div>
-
-      <div class="pt-2 border-t border-slate-800 flex justify-end">
-        <button onclick="togglePanel('settings-modal')" class="bg-blue-600 text-white text-xs font-medium px-5 py-2.5 rounded-xl hover:bg-blue-500">關閉</button>
+      <div class="pt-2 border-t border-slate-200 flex justify-end">
+        <button onclick="togglePanel('settings-modal')" class="bg-slate-900 text-white text-xs font-bold px-5 py-2.5 rounded-xl hover:bg-slate-800">儲存變更</button>
       </div>
     </div>
   </div>
 
-  <!-- Three.js 主邏輯 -->
+  <!-- Three.js 核心邏輯 -->
   <script>
-    let scene, camera, renderer, controls, currentModel;
-    let gridHelper, ambientLight, dirLight;
-    let isAutoRotate = false;
-    let isWireframe = false;
-    let clock = new THREE.Clock();
+    let scene, camera, renderer, orbitControls, currentModel;
+    let ambientLight, hemiLight;
+    let isWalkMode = false;
+    
+    // 第一人稱漫遊參數
+    let moveForward = 0, moveSide = 0;
+    let yaw = 0, pitch = 0;
+    let isTouchSwiping = false;
+    let touchStartX = 0, touchStartY = 0;
+    const moveSpeed = 0.08;
+
+    // 鍵盤狀態 (PC端)
+    const keys = { w: false, a: false, s: false, d: false };
 
     function initEngine() {
       const container = document.getElementById('canvas-container');
       
       scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x0f172a);
+      scene.background = new THREE.Color(0xf0f0f2);
 
-      camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-      camera.position.set(5, 5, 5);
+      camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.05, 1000);
+      camera.position.set(0, 2, 5);
 
       renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.shadowMap.enabled = true;
+      
+      // ⭐ 關鍵：關閉影調重疊，還原照片色彩真諦
+      renderer.outputEncoding = THREE.sRGBEncoding;
       container.appendChild(renderer.domElement);
 
-      controls = new THREE.OrbitControls(camera, renderer.domElement);
-      controls.enableDamping = true;
-      controls.dampingFactor = 0.05;
+      // 環繞控制器
+      orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
+      orbitControls.enableDamping = true;
+      orbitControls.dampingFactor = 0.05;
 
-      ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+      // ⭐ 關鍵：雙重無死角補光 (防止房屋內部暗黑)
+      ambientLight = new THREE.AmbientLight(0xffffff, 2.5);
       scene.add(ambientLight);
 
-      dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
-      dirLight.position.set(10, 20, 15);
-      scene.add(dirLight);
-
-      gridHelper = new THREE.GridHelper(20, 20, 0x3b82f6, 0x334155);
-      gridHelper.position.y = -0.01;
-      scene.add(gridHelper);
+      hemiLight = new THREE.HemisphereLight(0xffffff, 0xe0e0e0, 1.2);
+      hemiLight.position.set(0, 50, 0);
+      scene.add(hemiLight);
 
       window.addEventListener('resize', onWindowResize);
+      setupKeyboardAndTouch();
       animate();
 
-      // 預設載入同目錄下的 24_7_2026.glb
+      // 自動載入預設模型（若在預覽或非 HTTP 伺服器環境下自動使用模擬示範房間）
       loadGLTFUrl('24_7_2026.glb');
     }
 
@@ -227,114 +236,305 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
     }
 
+    // 主動畫渲染 Loop
     function animate() {
       requestAnimationFrame(animate);
-      if (controls) {
-        controls.autoRotate = isAutoRotate;
-        controls.update();
+
+      if (!isWalkMode) {
+        orbitControls.update();
+      } else {
+        // 第一人稱漫遊移動邏輯
+        updateWalkMovement();
       }
+
       renderer.render(scene, camera);
     }
 
+    // 第一人稱移動計算
+    function updateWalkMovement() {
+      // 計算 PC 鍵盤輸入
+      let fwd = moveForward;
+      let side = moveSide;
+
+      if (keys.w) fwd = 1;
+      if (keys.s) fwd = -1;
+      if (keys.a) side = -1;
+      if (keys.d) side = 1;
+
+      if (fwd !== 0 || side !== 0) {
+        const dir = new THREE.Vector3();
+        camera.getWorldDirection(dir);
+        dir.y = 0; // 保持水平移動，不隨視角上下偏轉
+        dir.normalize();
+
+        const sideDir = new THREE.Vector3().crossVectors(camera.up, dir).negate().normalize();
+
+        camera.position.addScaledVector(dir, fwd * moveSpeed);
+        camera.position.addScaledVector(sideDir, side * moveSpeed);
+      }
+    }
+
+    // 安全載入 3D 模型 (.glb)
     function loadGLTFUrl(url, filename = '24_7_2026.glb') {
-      showLoading(true, `載入 ${filename}...`);
+      showLoading(true, `載入模型 ${filename}...`);
+
+      // 檢查是否為相對路徑且處於 blob: 或 file: 預覽環境中
+      const isRelative = !url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('blob:') && !url.startsWith('data:');
       
-      const loader = new THREE.GLTFLoader();
-      loader.load(url, function (gltf) {
-        if (currentModel) scene.remove(currentModel);
+      if (isRelative && (window.location.protocol === 'blob:' || window.location.protocol === 'file:')) {
+        console.warn('目前處於 Blob/Local 預覽模式，無法發起相對路徑 XMLHttpRequest，載入預設示範房間。');
+        createDemoRoom();
+        return;
+      }
 
-        currentModel = gltf.scene;
+      try {
+        const loader = new THREE.GLTFLoader();
+        loader.load(url, function (gltf) {
+          if (currentModel) scene.remove(currentModel);
 
-        // 計算置中與鏡頭最佳距離
-        const box = new THREE.Box3().setFromObject(currentModel);
-        const center = box.getCenter(new THREE.Vector3());
-        const size = box.getSize(new THREE.Vector3());
+          currentModel = gltf.scene;
 
-        currentModel.position.sub(center);
-        scene.add(currentModel);
+          // 遍歷所有 Mesh 材質：提高貼圖亮度
+          currentModel.traverse((child) => {
+            if (child.isMesh && child.material) {
+              child.material.roughness = 0.8;
+              child.material.metalness = 0.1;
+              if (child.material.map) child.material.map.encoding = THREE.sRGBEncoding;
+            }
+          });
 
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const fov = camera.fov * (Math.PI / 180);
-        let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * 2.2;
-        cameraZ = Math.max(cameraZ, 2);
+          // 模型置中與相機定位
+          const box = new THREE.Box3().setFromObject(currentModel);
+          const center = box.getCenter(new THREE.Vector3());
 
-        camera.position.set(cameraZ * 0.8, cameraZ * 0.6, cameraZ);
-        camera.lookAt(0, 0, 0);
-        controls.target.set(0, 0, 0);
-        controls.update();
+          currentModel.position.sub(center);
+          scene.add(currentModel);
 
-        // 面數與頂點統計
-        let totalVertices = 0, totalFaces = 0;
-        currentModel.traverse((child) => {
-          if (child.isMesh && child.geometry) {
-            totalVertices += child.geometry.attributes.position ? child.geometry.attributes.position.count : 0;
-            totalFaces += child.geometry.index ? child.geometry.index.count / 3 : (child.geometry.attributes.position ? child.geometry.attributes.position.count / 3 : 0);
+          resetCamera();
+          showLoading(false);
+        },
+        function (xhr) {
+          if (xhr.lengthComputable) {
+            const percent = Math.round((xhr.loaded / xhr.total) * 100);
+            document.getElementById('loading-text').innerText = `解析色彩與幾何中 ${percent}%...`;
           }
+        },
+        function (error) {
+          console.warn('GLTF 檔未能載入，將顯示預設示範房間:', error);
+          createDemoRoom();
         });
+      } catch (err) {
+        console.warn('發起模型讀取請求失敗，切換至預設示範房間:', err);
+        createDemoRoom();
+      }
+    }
 
-        document.getElementById('info-faces').innerText = Math.round(totalFaces).toLocaleString();
-        document.getElementById('info-vertices').innerText = totalVertices.toLocaleString();
+    // 創建高品質預設 3D 示範房屋（供預覽模式下無縫測試）
+    function createDemoRoom() {
+      if (currentModel) scene.remove(currentModel);
 
-        showLoading(false);
-      }, 
-      function (xhr) {
-        if (xhr.lengthComputable) {
-          const percent = Math.round((xhr.loaded / xhr.total) * 100);
-          document.getElementById('loading-text').innerText = `讀取模型中 ${percent}%...`;
+      const roomGroup = new THREE.Group();
+
+      // 地板
+      const floorGeo = new THREE.PlaneGeometry(8, 8);
+      const floorMat = new THREE.MeshStandardMaterial({ color: 0xdfd7cc, roughness: 0.4 });
+      const floor = new THREE.Mesh(floorGeo, floorMat);
+      floor.rotation.x = -Math.PI / 2;
+      roomGroup.add(floor);
+
+      // 地毯
+      const rugGeo = new THREE.PlaneGeometry(4, 3);
+      const rugMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.9 });
+      const rug = new THREE.Mesh(rugGeo, rugMat);
+      rug.rotation.x = -Math.PI / 2;
+      rug.position.set(0, 0.01, 0.5);
+      roomGroup.add(rug);
+
+      // 主牆面
+      const wallMat = new THREE.MeshStandardMaterial({ color: 0xf5f5f7, roughness: 0.8 });
+      
+      const backWallGeo = new THREE.BoxGeometry(8, 3.5, 0.1);
+      const backWall = new THREE.Mesh(backWallGeo, wallMat);
+      backWall.position.set(0, 1.75, -4);
+      roomGroup.add(backWall);
+
+      const leftWallGeo = new THREE.BoxGeometry(0.1, 3.5, 8);
+      const leftWall = new THREE.Mesh(leftWallGeo, wallMat);
+      leftWall.position.set(-4, 1.75, 0);
+      roomGroup.add(leftWall);
+
+      // 電視櫃與電視
+      const tvCabinetGeo = new THREE.BoxGeometry(3, 0.5, 0.6);
+      const tvCabinetMat = new THREE.MeshStandardMaterial({ color: 0x4a3b32 });
+      const tvCabinet = new THREE.Mesh(tvCabinetGeo, tvCabinetMat);
+      tvCabinet.position.set(0, 0.25, -3.5);
+      roomGroup.add(tvCabinet);
+
+      const tvGeo = new THREE.BoxGeometry(2.2, 1.2, 0.08);
+      const tvMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2 });
+      const tv = new THREE.Mesh(tvGeo, tvMat);
+      tv.position.set(0, 1.4, -3.5);
+      roomGroup.add(tv);
+
+      // 沙發
+      const sofaBaseGeo = new THREE.BoxGeometry(3.2, 0.4, 1.2);
+      const sofaMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.7 });
+      const sofaBase = new THREE.Mesh(sofaBaseGeo, sofaMat);
+      sofaBase.position.set(0, 0.2, 1.5);
+      roomGroup.add(sofaBase);
+
+      const sofaBackGeo = new THREE.BoxGeometry(3.2, 0.8, 0.3);
+      const sofaBack = new THREE.Mesh(sofaBackGeo, sofaMat);
+      sofaBack.position.set(0, 0.6, 1.95);
+      roomGroup.add(sofaBack);
+
+      currentModel = roomGroup;
+      scene.add(currentModel);
+
+      document.getElementById('file-title').innerText = '預設示範房間 (可點開啟換檔)';
+      resetCamera();
+      showLoading(false);
+    }
+
+    // 切換模式：360° 環繞 ↔ 第一人稱漫遊
+    function toggleWalkMode() {
+      isWalkMode = !isWalkMode;
+      const btnText = document.getElementById('walk-btn-text');
+      const modeBadge = document.getElementById('mode-badge');
+      const joystickZone = document.getElementById('joystick-zone');
+      const heightControls = document.getElementById('height-controls');
+
+      if (isWalkMode) {
+        orbitControls.enabled = false;
+        btnText.innerText = "退出漫遊 (返回 360° 環繞)";
+        modeBadge.innerText = "🚶 第一人稱漫遊模式";
+        joystickZone.classList.remove('hidden');
+        heightControls.classList.remove('hidden');
+
+        // 把鏡頭放進屋內視野最佳高度
+        if (currentModel) {
+          const box = new THREE.Box3().setFromObject(currentModel);
+          camera.position.y = box.min.y + 1.3; // 模擬人類身高 1.3~1.6 米
         }
-      },
-      function (error) {
-        console.error('GLTF 載入失敗:', error);
-        document.getElementById('loading-text').innerText = '預設模型載入失敗，請點選右上角手動選擇檔案';
-      });
+      } else {
+        orbitControls.enabled = true;
+        btnText.innerText = "虛擬導覽（第一人稱漫遊）";
+        modeBadge.innerText = "360° 環繞模式";
+        joystickZone.classList.add('hidden');
+        heightControls.classList.add('hidden');
+        resetCamera();
+      }
     }
 
-    function launchAR() {
-      const mv = document.getElementById('mv-ar');
-      if (mv && mv.activateAR) mv.activateAR();
-      else alert('您的裝置或瀏覽器不支援 WebAR。');
+    // 上下調整漫遊鏡頭高度
+    function changeCameraHeight(delta) {
+      camera.position.y += delta;
     }
 
+    // 重設鏡頭
     function resetCamera() {
       if (!currentModel) return;
       const box = new THREE.Box3().setFromObject(currentModel);
       const size = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(size.x, size.y, size.z);
-      camera.position.set(maxDim * 1.5, maxDim * 1.2, maxDim * 1.8);
-      controls.target.set(0, 0, 0);
-      controls.update();
-    }
 
-    function toggleAutoRotate() {
-      isAutoRotate = !isAutoRotate;
-      document.getElementById('btn-auto-rotate').classList.toggle('text-blue-400', isAutoRotate);
-    }
-
-    function toggleWireframe() {
-      isWireframe = !isWireframe;
-      if (currentModel) {
-        currentModel.traverse((child) => {
-          if (child.isMesh && child.material) {
-            if (Array.isArray(child.material)) child.material.forEach(m => m.wireframe = isWireframe);
-            else child.material.wireframe = isWireframe;
-          }
-        });
+      camera.position.set(maxDim * 0.8, maxDim * 0.7, maxDim * 1.2);
+      camera.lookAt(0, 0, 0);
+      if (orbitControls) {
+        orbitControls.target.set(0, 0, 0);
+        orbitControls.update();
       }
-      document.getElementById('btn-wireframe').classList.toggle('text-blue-400', isWireframe);
     }
 
-    function setBackground(type) {
-      if (type === 'dark') scene.background = new THREE.Color(0x0f172a);
-      if (type === 'light') scene.background = new THREE.Color(0xf8fafc);
-      if (type === 'gradient') scene.background = new THREE.Color(0x09111e);
+    // 觸控與搖桿控制設置
+    function setupKeyboardAndTouch() {
+      // PC 鍵盤
+      window.addEventListener('keydown', (e) => { if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true; });
+      window.addEventListener('keyup', (e) => { if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false; });
+
+      // 手機視角旋轉 (Touch drag outside joystick)
+      const container = document.getElementById('canvas-container');
+
+      container.addEventListener('touchstart', (e) => {
+        if (!isWalkMode) return;
+        const touch = e.touches[0];
+        // 如果不是在左下角搖桿區域觸控，則為旋轉視角
+        if (touch.clientX > 160 || touch.clientY < window.innerHeight - 180) {
+          isTouchSwiping = true;
+          touchStartX = touch.clientX;
+          touchStartY = touch.clientY;
+        }
+      });
+
+      container.addEventListener('touchmove', (e) => {
+        if (!isWalkMode || !isTouchSwiping) return;
+        const touch = e.touches[0];
+        const deltaX = touch.clientX - touchStartX;
+        const deltaY = touch.clientY - touchStartY;
+
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+
+        // 調整視角 Yaw / Pitch
+        const rotSpeed = 0.004;
+        camera.rotation.y -= deltaX * rotSpeed;
+        camera.rotation.x -= deltaY * rotSpeed;
+        camera.rotation.x = Math.max(-Math.PI/2.2, Math.min(Math.PI/2.2, camera.rotation.x));
+      });
+
+      container.addEventListener('touchend', () => { isTouchSwiping = false; });
+
+      // 虛擬搖桿 (Joystick Logic)
+      const zone = document.getElementById('joystick-zone');
+      const knob = document.getElementById('joystick-knob');
+      let joyActive = false;
+      let joyStartX = 0, joyStartY = 0;
+
+      zone.addEventListener('touchstart', (e) => {
+        e.stopPropagation();
+        joyActive = true;
+        const t = e.touches[0];
+        joyStartX = t.clientX;
+        joyStartY = t.clientY;
+      });
+
+      zone.addEventListener('touchmove', (e) => {
+        if (!joyActive) return;
+        e.stopPropagation();
+        const t = e.touches[0];
+        const dx = t.clientX - joyStartX;
+        const dy = t.clientY - joyStartY;
+        const dist = Math.min(Math.hypot(dx, dy), 40);
+        const angle = Math.atan2(dy, dx);
+
+        const knobX = Math.cos(angle) * dist;
+        const knobY = Math.sin(angle) * dist;
+        knob.style.transform = `translate(${knobX}px, ${knobY}px)`;
+
+        // 計算前後左右移動量
+        moveSide = knobX / 40;
+        moveForward = -knobY / 40;
+      });
+
+      const resetJoy = () => {
+        joyActive = false;
+        knob.style.transform = `translate(0px, 0px)`;
+        moveForward = 0;
+        moveSide = 0;
+      };
+
+      zone.addEventListener('touchend', resetJoy);
+      zone.addEventListener('touchcancel', resetJoy);
+    }
+
+    function setBackground(hex) {
+      scene.background = new THREE.Color(hex);
     }
 
     function updateLightIntensity(val) {
       if (ambientLight) ambientLight.intensity = parseFloat(val);
       document.getElementById('light-val').innerText = val;
     }
-
-    function toggleGrid(show) { if (gridHelper) gridHelper.visible = show; }
 
     function togglePanel(id) {
       document.getElementById(id).classList.toggle('hidden');
@@ -346,15 +546,6 @@
       el.classList.toggle('hidden', !show);
     }
 
-    function takeScreenshot() {
-      renderer.render(scene, camera);
-      const dataUrl = renderer.domElement.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.download = `3D_Screenshot.png`;
-      link.href = dataUrl;
-      link.click();
-    }
-
     window.onload = () => {
       initEngine();
       lucide.createIcons();
@@ -364,7 +555,6 @@
           const file = e.target.files[0];
           document.getElementById('file-title').innerText = file.name;
           const url = URL.createObjectURL(file);
-          document.getElementById('mv-ar').src = url;
           loadGLTFUrl(url, file.name);
         }
       });
