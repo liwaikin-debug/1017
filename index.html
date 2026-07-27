@@ -32,17 +32,17 @@
     <!-- ==================== 左側：3D 視窗 (改用 Polycam Iframe) ==================== -->
     <section class="lg:col-span-8 flex flex-col gap-2 relative h-full min-h-[50vh]">
       
-      <!-- 3D 展示主大框 -->
-      <div class="relative w-full h-full bg-slate-900 rounded-2xl overflow-hidden shadow-lg border border-slate-200">
+      <!-- 3D 展示主大框 (改為引導按鈕) -->
+      <div class="relative w-full h-full bg-slate-900 rounded-2xl overflow-hidden shadow-lg border border-slate-200 flex flex-col items-center justify-center text-center p-6">
         
-        <!-- 這裡直接嵌入 Polycam 的網頁 -->
-        <iframe 
-          src="https://poly.cam/capture/59D78E03-01F0-4AB7-90C6-5E0856616C63" 
-          title="Polycam 3D Capture" 
-          frameborder="0" 
-          class="w-full h-full"
-          allow="fullscreen; xr-spatial-tracking">
-        </iframe>
+        <i data-lucide="box" class="w-16 h-16 mb-4 text-blue-400 opacity-80"></i>
+        <h3 class="text-xl font-bold mb-2 text-white">3D 空間已準備就緒</h3>
+        <p class="text-slate-300 text-sm mb-6 max-w-sm">為咗提供最高清、最流暢嘅 360 度全景體驗，請點擊下方按鈕進入專屬全螢幕模式觀看。</p>
+        
+        <a href="https://poly.cam/capture/59D78E03-01F0-4AB7-90C6-5E0856616C63" target="_blank" rel="noopener noreferrer" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition transform hover:scale-105 active:scale-95 flex items-center gap-2">
+          <span>進入 3D 睇樓空間</span>
+          <i data-lucide="external-link" class="w-5 h-5"></i>
+        </a>
 
         <!-- 左上角狀態 -->
         <div class="absolute top-4 left-4 z-10 bg-slate-900/70 backdrop-blur text-white text-xs px-3 py-1.5 rounded-full border border-white/20 flex items-center gap-1.5 shadow-md pointer-events-none">
